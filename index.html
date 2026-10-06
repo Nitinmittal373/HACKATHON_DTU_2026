@@ -2,10 +2,16 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=frontend/landingpage.html">
   <title>Shastra — Awakening Education</title>
 </head>
 <body>
-  <script>window.location.replace("frontend/landingpage.html");</script>
+  <script>
+    const search = window.location.search || '';
+    if (search.includes('go=login')) {
+      window.location.replace("frontend/index.html" + search);
+    } else {
+      window.location.replace("frontend/landingpage.html" + search);
+    }
+  </script>
 </body>
 </html>

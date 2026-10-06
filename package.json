@@ -4,8 +4,10 @@
   "description": "Shastra — Vivekananda-themed Education Platform. Measures character over marks.",
   "private": true,
   "scripts": {
-    "start": "cd backend && node server.js",
-    "dev": "cd backend && npm run dev",
+    "start": "node dev.js",
+    "dev": "node dev.js",
+    "dev:backend": "cd backend && node server.js",
+    "dev:frontend": "cd frontend && node server.js",
     "install:backend": "cd backend && npm install",
     "install:all": "npm run install:backend",
     "test": "cd backend && npm test"

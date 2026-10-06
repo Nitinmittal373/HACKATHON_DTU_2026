@@ -20,15 +20,31 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 
 /* ── CORS ── */
-const DEV_ORIGINS = ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'];
+const DEV_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+];
 const allowedOrigins = process.env.CLIENT_URL
   ? [process.env.CLIENT_URL, ...DEV_ORIGINS]
   : DEV_ORIGINS;
 
+const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+
 app.use(cors({
   origin: (origin, cb) => {
-    // allow same-origin and file:// requests (no Origin header)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // allow same-origin, curl, server-to-server, file:// (no Origin header)
+    if (!origin) return cb(null, true);
+    // In development, allow all localhost and 127.0.0.1 origins on any port
+    if (isDev && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return cb(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return cb(null, true);
+    }
     cb(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
@@ -39,6 +55,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 /* ── Serve frontend ── */
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/landingpage.html'));
+});
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 /* ── API routes ── */

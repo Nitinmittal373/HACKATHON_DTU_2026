@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Shastra — Vivekananda Education Platform UI",
   "scripts": {
-    "start": "npx serve . -p 3000",
+    "start": "node server.js",
     "lint": "echo 'No linter configured yet'"
   },
   "dependencies": {

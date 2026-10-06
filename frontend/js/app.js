@@ -383,7 +383,7 @@ function renderLogin() {
   <div class="auth-page">
     <div class="auth-split">
       <div class="auth-left">
-        <div class="brand"><span class="om">ॐ</span><span>Shastra</span></div>
+        <a href="landingpage.html" class="brand" style="text-decoration:none"><span class="om">ॐ</span><span>Shastra</span></a>
         <div>
           <p class="auth-left-quote">"All the power is within you. You can do anything and everything."</p>
           <p class="auth-left-attr">— Swami Vivekananda</p>
@@ -1136,12 +1136,19 @@ function teacherSettings() {
    ───────────────────────────────────────────────────────── */
 (function boot() {
   const params = new URLSearchParams(window.location.search);
-  /* coming from landingpage.html CTA → go straight to login */
+  const token  = sessionStorage.getItem('token');
+  const role   = sessionStorage.getItem('role');
+
+  /* coming from landingpage.html CTA → clean URL and go straight to login */
   if (params.get('go') === 'login') {
-    /* clean the URL so a back/refresh doesn't re-trigger */
-    history.replaceState(null, '', window.location.pathname);
+    try { history.replaceState(null, '', window.location.pathname); } catch (_) {}
     renderLogin();
+  } else if (token && role) {
+    /* restore active session on refresh */
+    if (role === 'teacher') renderTeacher('overview');
+    else renderStudent('dashboard');
   } else {
-    renderLanding();
+    /* app entry point default: show login screen */
+    renderLogin();
   }
 })();
