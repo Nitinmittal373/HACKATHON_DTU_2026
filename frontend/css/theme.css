@@ -1,0 +1,119 @@
+/* ═══════════════════════════════════════════════════════════
+   SHASTRA — Design Tokens & Base Theme
+   Vivekananda palette: Saffron · Maroon · Gold · Sandalwood
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Design tokens ── */
+:root {
+  /* Colours */
+  --bg:        #fdf6ec;
+  --surface:   #fffdf7;
+  --ink:       #1c1207;
+  --muted:     #7a6348;
+  --saffron:   #e07020;
+  --deep-saf:  #b85510;
+  --gold:      #c8941a;
+  --maroon:    #6b1a2a;
+  --cream:     #f5e8cc;
+  --line:      #e2cfa4;
+  --good:      #2d6e45;
+  --warn:      #9c3a1a;
+  --om-glow:   rgba(224,112,32,0.18);
+
+  /* Typography */
+  --font-head:  'Playfair Display', Georgia, serif;
+  --font-body:  'Hind', 'Noto Sans', system-ui, sans-serif;
+  --font-mono:  'IBM Plex Mono', monospace;
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 40px;
+
+  /* Radii */
+  --r-sm:  8px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  20px;
+  --r-pill: 999px;
+}
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:      #120a02;
+    --surface: #1e1208;
+    --ink:     #f5e8cc;
+    --muted:   #c4a06a;
+    --saffron: #f08030;
+    --deep-saf:#e06018;
+    --gold:    #e0aa30;
+    --maroon:  #c43050;
+    --cream:   #2a1a08;
+    --line:    #3a2510;
+    --good:    #4a9e65;
+    --warn:    #e06040;
+    --om-glow: rgba(240,128,48,0.22);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:      #120a02;
+  --surface: #1e1208;
+  --ink:     #f5e8cc;
+  --muted:   #c4a06a;
+  --saffron: #f08030;
+  --deep-saf:#e06018;
+  --gold:    #e0aa30;
+  --maroon:  #c43050;
+  --cream:   #2a1a08;
+  --line:    #3a2510;
+  --good:    #4a9e65;
+  --warn:    #e06040;
+  --om-glow: rgba(240,128,48,0.22);
+  color-scheme: dark;
+}
+
+/* ── Base reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+h1, h2, h3 { font-family: var(--font-head); text-wrap: balance; }
+img         { max-width: 100%; }
+button      { cursor: pointer; font-family: var(--font-body); }
+[hidden]    { display: none !important; }
+canvas      { max-width: 100%; display: block; }
+
+/* ── Decorative Om border strip ── */
+.border-strip {
+  height: 5px;
+  background: repeating-linear-gradient(90deg,
+    var(--saffron) 0px,  var(--saffron) 18px,
+    var(--gold)    18px, var(--gold)    24px,
+    var(--maroon)  24px, var(--maroon)  30px,
+    var(--gold)    30px, var(--gold)    36px
+  );
+}
+
+/* ── Om symbols ── */
+.om    { font-size: 1.8rem; color: var(--saffron); line-height: 1; }
+.om-lg {
+  font-size: 3.5rem; color: var(--saffron);
+  filter: drop-shadow(0 0 12px var(--om-glow));
+}
+
+/* ── Layout ── */
+.wrap { max-width: 1060px; margin: 0 auto; padding: var(--sp-lg) 20px 64px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: var(--sp-md); }

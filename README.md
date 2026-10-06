@@ -1,83 +1,97 @@
-# Shastra — Awakening Education
+# ॐ Shastra — Awakening Education
 
-A Vivekananda-themed education platform that measures character over marks — tracking Concentration, Self-Reliance, Perseverance, and Confidence as the four pillars of a student's growth.
+> *"Education is the manifestation of the perfection already in man."* — Swami Vivekananda
 
-## Problem
-Traditional grading systems measure outcomes, not effort or character development. Students who struggle but persist are penalised alongside those who don't try.
+A Vivekananda-themed education platform that measures **character over marks** — tracking Concentration, Self-Reliance, Perseverance, and Confidence as the four pillars of a student's growth.
 
-## Solution
-Shastra computes four behavioural scores from real session data (focus time, hint usage, retry patterns, self-assessment accuracy) and surfaces a holistic "Character Score" for both students and teachers.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-## Tech Stack
-- **Frontend:** Vanilla HTML · CSS custom properties · Vanilla JS
-- **Backend:** Python · Flask · flask-cors
-- **Fonts:** Playfair Display, Hind, IBM Plex Mono (Google Fonts)
+---
 
-## Getting Started
+## Quick Start
 
 ```bash
-git clone <repo-url>
+# 1. Clone
+git clone https://github.com/Nitinmittal373/HACKATHON_DTU_2026.git
 cd HACKATHON_DTU_2026
-cp .env.example .env
 
-# Frontend — open directly in browser (no build step)
-open src/frontend/index.html
+# 2. Frontend — open directly, zero setup
+open frontend/index.html
 
-# Backend
-cd src/backend
-pip install -r requirements.txt
-python app.py          # serves on http://localhost:5000
+# 3. Backend (Node.js)
+cd backend && cp .env.example .env && npm install && npm run dev
+# → http://localhost:5000
 ```
 
-## Folder Structure
+**Demo accounts** · Student: `rahul_singh / pass` · Teacher: `teacher_priya / pass`
+
+---
+
+## What We Measure
+
+| Metric | Measures |
+|--------|----------|
+| 🔥 Concentration (एकाग्रता) | Focus time, tab switches, correct streaks |
+| 🌳 Self-Reliance (आत्मनिर्भरता) | Hint-free task ratio, week-over-week improvement |
+| ⚡ Perseverance (दृढ़ता) | Retry-to-success rate, healthy retry range |
+| ⭐ Confidence (आत्मविश्वास) | Gap between self-rating and actual performance |
+| 🛡️ **Character** (चरित्र) | Composite — equal 25% weight of all four |
+
+---
+
+## Tech Stack
+
+| | Tech |
+|-|------|
+| Frontend | Vanilla HTML · CSS custom properties · Vanilla JS |
+| Backend | Node.js · Express.js · JWT |
+| Database | MongoDB (Mongoose) |
+| Alt backend | Python · Flask (in `src/backend/`) |
+
+---
+
+## Docs
+
+| File | Contents |
+|------|----------|
+| [docs/README.md](docs/README.md) | Full project overview |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Data flow, file map |
+| [docs/API.md](docs/API.md) | All API endpoints with examples |
+| [docs/SETUP.md](docs/SETUP.md) | Step-by-step local setup |
+| [docs/METRICS.md](docs/METRICS.md) | Formula deep-dive for all 5 metrics |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Git workflow, commit style |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy to Netlify / Railway / Fly.io |
+
+---
+
+## Project Structure
 
 ```
-src/
-  frontend/
-    index.html              entry point
-    css/
-      styles.css            Vivekananda design system (tokens + components)
-    js/
-      data.js               sample data, score formulas, SVG portraits
-      charts.js             canvas line + bar chart helpers
-      app.js                UI render functions (login / student / teacher)
-  backend/
-    app.py                  Flask entry point — serves frontend + /api/*
-    requirements.txt
-    routes/
-      analytics.py          POST /api/student/:id/scores
-    models/
-      student.py            Student dataclass
-    utils/
-      calculations.py       score formulas (mirrors frontend data.js)
-docs/                       notes, architecture, pitch deck
-assets/                     images, diagrams, static files
-tests/                      unit + integration tests
+HACKATHON_DTU_2026/
+├── frontend/           Vanilla HTML/CSS/JS UI
+│   ├── index.html
+│   ├── css/theme.css       Design tokens (saffron, maroon, gold)
+│   ├── css/components.css  All component styles
+│   └── js/app.js           Data, formulas, charts, screens
+│
+├── backend/            Node.js / Express API
+│   ├── server.js
+│   ├── routes/         auth · students · tasks · metrics
+│   ├── models/         Student (Mongoose schema)
+│   ├── middleware/     JWT auth
+│   └── config/         MongoDB connection
+│
+├── src/                Original Flask implementation
+│   ├── frontend/       Split HTML/CSS/JS version
+│   └── backend/        Python/Flask API
+│
+├── docs/               7 documentation files
+├── tests/
+├── package.json
+└── LICENSE
 ```
 
-## Scores Explained
-
-| Score | Measures | Key signals |
-|-------|----------|-------------|
-| Concentration | Sustained focus | Focus-time %, tab switches, answer streaks |
-| Self-Reliance | Independent work | Hint-free task ratio, week-over-week hint reduction |
-| Perseverance  | Healthy resilience | Retry-to-success rate, retry count in healthy 2–3.2 range |
-| Confidence    | Self-awareness | Gap between self-rating and actual performance |
-| **Character** | Composite | Equal 25% weight of all four above |
-
-## API
-
-```
-POST /api/student/:id/scores
-Content-Type: application/json
-
-{
-  "today":       { "focusSeconds": 1080, "totalSeconds": 1200, "tabSwitches": 1, "correctStreak": 3 },
-  "week":        { "tasksAttempted": 14, "tasksNoHint": 11, "hintsThisWeek": 6, "hintsLastWeek": 11 },
-  "retries":     { "retriedCount": 5, "eventualSuccess": 4, "avgRetries": 2.4 },
-  "calibration": [ { "rated": 4, "actual": 3 }, ... ]
-}
-```
+---
 
 ## Team
 
@@ -85,5 +99,8 @@ Content-Type: application/json
 |------|------|
 |      |      |
 
+---
+
 ## License
-MIT
+
+MIT — see [LICENSE](./LICENSE)

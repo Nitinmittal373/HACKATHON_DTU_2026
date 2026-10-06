@@ -1,0 +1,19 @@
+{
+  "name": "shastra",
+  "version": "1.0.0",
+  "description": "Shastra — Vivekananda-themed Education Platform. Measures character over marks.",
+  "private": true,
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "dev": "cd backend && npm run dev",
+    "install:backend": "cd backend && npm install",
+    "install:all": "npm run install:backend",
+    "test": "cd backend && npm test"
+  },
+  "keywords": ["education", "vivekananda", "hackathon", "dtu", "shastra"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
