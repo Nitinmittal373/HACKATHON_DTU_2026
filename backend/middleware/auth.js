@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-do-not-use-in-production';
+
 /**
  * Middleware: verify JWT and attach payload to req.user
  * Usage: router.get('/protected', authMiddleware, handler)
@@ -12,7 +14,7 @@ function authMiddleware(req, res, next) {
   }
 
   try {
-    req.user = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev-secret');
+    req.user = jwt.verify(auth.slice(7), JWT_SECRET);
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });

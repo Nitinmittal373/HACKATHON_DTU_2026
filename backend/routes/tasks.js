@@ -1,5 +1,6 @@
 const express = require('express');
 const router  = express.Router();
+const { authMiddleware } = require('../middleware/auth');
 
 /* Sample task bank */
 const TASKS = [
@@ -20,7 +21,7 @@ const TASKS = [
  * GET /api/tasks
  * Query: ?subject=Algebra
  */
-router.get('/', (req, res) => {
+router.get('/', authMiddleware, (req, res) => {
   let tasks = TASKS;
   if (req.query.subject) {
     tasks = tasks.filter(t => t.subject === req.query.subject);
@@ -33,7 +34,7 @@ router.get('/', (req, res) => {
  * GET /api/tasks/:id
  * Returns task without answer
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', authMiddleware, (req, res) => {
   const task = TASKS.find(t => t.id === req.params.id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
   const { answer, ...safe } = task;
@@ -45,7 +46,7 @@ router.get('/:id', (req, res) => {
  * Body: { studentId, answer, hintsUsed, selfRating, focusSeconds, totalSeconds, tabSwitches, correctStreak }
  * Returns: { correct, feedback }
  */
-router.post('/:id/submit', (req, res) => {
+router.post('/:id/submit', authMiddleware, (req, res) => {
   const task = TASKS.find(t => t.id === req.params.id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
@@ -63,7 +64,7 @@ router.post('/:id/submit', (req, res) => {
  * GET /api/tasks/:id/hints
  * Returns progressive hints (each call reveals the next)
  */
-router.get('/:id/hints', (req, res) => {
+router.get('/:id/hints', authMiddleware, (req, res) => {
   const hints = {
     'fractions-1': ['Re-read and underline every known quantity.','Let x = total capacity. Write: x − (3/4)x = 15','Solve: (1/4)x = 15, so x = 60'],
     'algebra-1':   ['Add 7 to both sides.','You now have 3x = 21.','Divide both sides by 3.'],

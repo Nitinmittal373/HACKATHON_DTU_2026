@@ -7,9 +7,10 @@
      1. DATA       — Quotes, sample student/class data
      2. FORMULAS   — Score calculation functions
      3. CHARTS     — Canvas line & bar helpers
-     4. COMPONENTS — Reusable HTML builders
-     5. SCREENS    — Login / Student / Teacher views
-     6. BOOT       — Entry point
+     4. API        — apiFetch helper, API_BASE
+     5. COMPONENTS — Reusable HTML builders
+     6. SCREENS    — Login / Student / Teacher views
+     7. BOOT       — Entry point
    ========================================================= */
 
 /* ─────────────────────────────────────────────────────────
@@ -219,7 +220,34 @@ function drawBar(ctx, labels, series) {
 }
 
 /* ─────────────────────────────────────────────────────────
-   4. COMPONENTS
+   4. API HELPERS
+   ───────────────────────────────────────────────────────── */
+
+const API_BASE = 'http://localhost:5000';
+
+/**
+ * Fetch wrapper: adds Content-Type, auto-attaches Bearer token,
+ * parses JSON, throws on non-2xx with the server's error message.
+ */
+async function apiFetch(url, options = {}) {
+  const token = sessionStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+  } catch (err) {
+    throw new Error('Network error — is the server running?');
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+  return data;
+}
+
+/* ─────────────────────────────────────────────────────────
+   5. COMPONENTS — Reusable HTML builders
    ───────────────────────────────────────────────────────── */
 
 const $  = s => document.querySelector(s);
@@ -271,14 +299,18 @@ function topbarHTML(label) {
     </div>
   </div>`;
 }
-function bindLogout() { $('#logout-btn').onclick = renderLogin; }
+function bindLogout() {
+  $('#logout-btn').onclick = () => { sessionStorage.clear(); renderLogin(); };
+}
 
 /* ─────────────────────────────────────────────────────────
-   5. SCREENS
+   6. SCREENS
    ───────────────────────────────────────────────────────── */
 
 /* ── Login ── */
 function renderLogin() {
+  sessionStorage.clear();
+
   mount(`<div class="login-bg"><div class="login-card">
     <div class="vivek-portrait">${PORTRAIT_SM}</div>
     <h1 class="login-title">Shastra</h1>
@@ -292,6 +324,7 @@ function renderLogin() {
     <input class="login-input" id="uname" value="rahul_singh" placeholder="Username">
     <input class="login-input" id="pword" type="password" value="pass" placeholder="Password">
     <button class="login-go" id="go-btn">Enter the Path ›</button>
+    <div id="login-error" style="color:#e44;font-size:.85rem;min-height:1.2em;margin-top:.4rem;text-align:center"></div>
     <div class="login-hint">Demo — Student: rahul_singh / pass · Teacher: teacher_priya / pass</div>
     <div class="mandala-bg">ॐ</div>
   </div></div>`);
@@ -299,12 +332,46 @@ function renderLogin() {
   let role = 'student';
   $('#role-student').onclick = () => { role = 'student'; $('#role-student').classList.add('active'); $('#role-teacher').classList.remove('active'); $('#uname').value = 'rahul_singh'; };
   $('#role-teacher').onclick = () => { role = 'teacher'; $('#role-teacher').classList.add('active'); $('#role-student').classList.remove('active'); $('#uname').value = 'teacher_priya'; };
-  $('#go-btn').onclick = () => role === 'student' ? renderStudent('dashboard') : renderTeacher('overview');
+
+  $('#go-btn').onclick = async () => {
+    const username = $('#uname').value.trim();
+    const password = $('#pword').value;
+    const errEl    = $('#login-error');
+    const btn      = $('#go-btn');
+
+    errEl.textContent = '';
+    btn.disabled      = true;
+    btn.textContent   = 'Entering…';
+
+    try {
+      const data = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+
+      sessionStorage.setItem('token',    data.token);
+      sessionStorage.setItem('role',     data.role);
+      sessionStorage.setItem('username', data.username);
+      sessionStorage.setItem('name',     data.name);
+
+      if (data.role === 'teacher') {
+        renderTeacher('overview');
+      } else {
+        renderStudent('dashboard');
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+      btn.disabled      = false;
+      btn.textContent   = 'Enter the Path ›';
+    }
+  };
 }
 
 /* ── Student shell ── */
 function renderStudent(tab) {
-  mount(`${topbarHTML('Student · Rahul Singh')}
+  learnCleanup();
+  const name = sessionStorage.getItem('name') || 'Student';
+  mount(`${topbarHTML(`Student · ${name}`)}
   <div class="wrap">
     <div class="vivek-sidebar">${PORTRAIT_SVG}
       <div class="content"><h3>Swami Vivekananda's Vision</h3>
@@ -383,54 +450,260 @@ function studentProgress() {
   requestAnimationFrame(() => drawLine($('#trendChart').getContext('2d'), RAHUL.trend, ['Wk1','Wk2','Wk3','Wk4','Wk5']));
 }
 
-let LS = { taskIdx: 0, confidence: 0, focusing: true, focusedFor: 0, hintLevel: 0 };
+/* ─────────────────────────────────────────────────────────
+   Learn state — all mutable state for the Learn tab
+   ───────────────────────────────────────────────────────── */
+let LS = {
+  tasks: [],       // loaded from GET /api/tasks
+  taskIdx:    0,
+  confidence: 0,
+  focusing:   true,
+  focusedFor: 0,   // active focus seconds
+  totalSecs:  0,   // wall-clock seconds since task selected
+  hintLevel:  0,   // how many hints revealed
+  hintsData:  [],  // hint text from API (cached after first fetch)
+  retryCount: 0,   // wrong-answer attempts before eventual success
+  solved:     false,
+  submitting: false,
+  tabSwitches: 0,
+  _iv:    null,    // focus interval
+  _visEl: null,    // document visibilitychange handler ref
+};
 
-function studentLearn() {
-  $('#tabbody').innerHTML = `<div class="learn-grid"><div class="task-list" id="task-list"></div><div class="panel" id="task-panel"></div></div>`;
-  renderTaskList(); renderTaskPanel();
+/* Stop timer + remove visibility listener — call on every tab/screen change */
+function learnCleanup() {
+  if (LS._iv)    { clearInterval(LS._iv); LS._iv = null; }
+  if (LS._visEl) { document.removeEventListener('visibilitychange', LS._visEl); LS._visEl = null; }
 }
-function renderTaskList() {
-  $('#task-list').innerHTML = TASKS.map((t, i) => `<button class="task-item ${i===LS.taskIdx?'sel':''}" data-i="${i}"><div style="font-weight:700">${t.title}</div><div class="t-sub">${t.sub}</div></button>`).join('');
-  $$('.task-item').forEach(b => b.onclick = () => { LS = {taskIdx:+b.dataset.i,confidence:0,focusing:true,focusedFor:0,hintLevel:0}; renderTaskList(); renderTaskPanel(); });
+
+/* Reset per-task fields (keep tasks array) */
+function resetTaskState() {
+  learnCleanup();
+  LS.confidence = 0;
+  LS.focusing   = true;
+  LS.focusedFor = 0;
+  LS.totalSecs  = 0;
+  LS.hintLevel  = 0;
+  LS.hintsData  = [];
+  LS.retryCount = 0;
+  LS.solved     = false;
+  LS.submitting = false;
+  LS.tabSwitches = 0;
 }
-function renderTaskPanel() {
-  const t = TASKS[LS.taskIdx];
+
+/* ── studentLearn: load tasks from API, then render ── */
+async function studentLearn() {
+  $('#tabbody').innerHTML = `
+    <div class="learn-grid">
+      <div class="task-list" id="task-list">
+        <p class="section-note" style="padding:16px;opacity:.7">Loading tasks…</p>
+      </div>
+      <div class="panel" id="task-panel"></div>
+    </div>`;
+
+  learnCleanup();
+  LS.tasks = [];
+
+  try {
+    const data = await apiFetch('/api/tasks');
+    LS.tasks = data.tasks || [];
+    if (!LS.tasks.length) {
+      $('#task-list').innerHTML = `<p class="section-note" style="padding:16px">No tasks available.</p>`;
+      return;
+    }
+    LS.taskIdx = 0;
+    renderLearnList();
+    selectLearnTask(0);
+  } catch (err) {
+    $('#task-list').innerHTML = `
+      <div class="feedback no" style="margin:16px">
+        ⚠ Backend unavailable: ${err.message}
+        <br><small>Make sure the server is running on localhost:5000, then refresh.</small>
+      </div>`;
+  }
+}
+
+function renderLearnList() {
+  $('#task-list').innerHTML = LS.tasks.map((t, i) => `
+    <button class="task-item ${i === LS.taskIdx ? 'sel' : ''}" data-i="${i}">
+      <div style="font-weight:700">${t.title}</div>
+      <div class="t-sub">${t.subject}</div>
+    </button>`).join('');
+  $$('.task-item').forEach(b => b.onclick = () => selectLearnTask(+b.dataset.i));
+}
+
+function selectLearnTask(idx) {
+  resetTaskState();
+  LS.taskIdx = idx;
+  $$('.task-item').forEach(b => b.classList.toggle('sel', +b.dataset.i === idx));
+  renderLearnPanel();
+}
+
+function renderLearnPanel() {
+  const t = LS.tasks[LS.taskIdx];
+  if (!t) return;
+
   $('#task-panel').innerHTML = `
-    <div class="tracker"><span class="dot ${LS.focusing?'':'off'}"></span><span>${LS.focusing?'Focus tracking active':'Paused'}</span><span class="log">+<span id="fsecs">0</span>s</span></div>
+    <div class="tracker">
+      <span class="dot${LS.focusing ? '' : ' off'}"></span>
+      <span>${LS.focusing ? 'Focus tracking active' : 'Paused'}</span>
+      <span class="log">+<span id="fsecs">${LS.focusedFor}</span>s focus</span>
+    </div>
     <div class="conf-label">Rate your confidence before starting (1–5 ★)</div>
-    <div class="stars">${[1,2,3,4,5].map(n=>`<button class="star" data-n="${n}">★</button>`).join('')}</div>
-    <div class="problem">${t.q}</div>
-    <div class="ans"><input id="ans-in" placeholder="Your answer…" ${LS.confidence===0?'disabled':''}></div>
+    <div class="stars">${[1,2,3,4,5].map(n =>
+      `<button class="star${n <= LS.confidence ? ' on' : ''}" data-n="${n}">★</button>`).join('')}
+    </div>
+    <div class="problem">${t.question}</div>
+    <div class="ans">
+      <input id="ans-in" placeholder="Your answer…" ${LS.confidence === 0 ? 'disabled' : ''}>
+    </div>
     <div class="btnrow">
-      <button class="btn primary" id="sub-btn" ${LS.confidence===0?'disabled':''}>Submit Answer</button>
+      <button class="btn primary" id="sub-btn" ${LS.confidence === 0 ? 'disabled' : ''}>Submit Answer</button>
       <button class="btn ghost" id="hint-btn">Need a Hint?</button>
     </div>
-    <div id="fb"></div><div id="hints"></div>
-    <div class="live-calc">Tracking → Focus time: <b>Concentration</b> · No hint: <b>Self-Reliance</b> · Retry: <b>Perseverance</b> · Star vs result: <b>Confidence</b></div>`;
+    <div id="fb"></div>
+    <div id="hints"></div>
+    <div class="live-calc">Tracking → Focus: <b>Concentration</b> · No hint: <b>Self-Reliance</b> · Retry: <b>Perseverance</b> · Star vs result: <b>Confidence</b></div>`;
 
+  /* confidence stars */
   $$('.star').forEach(s => s.onclick = () => {
     LS.confidence = +s.dataset.n;
     $$('.star').forEach(x => x.classList.toggle('on', +x.dataset.n <= LS.confidence));
-    $('#ans-in').disabled = false; $('#sub-btn').disabled = false;
+    $('#ans-in').disabled  = false;
+    $('#sub-btn').disabled = false;
   });
-  $('#hint-btn').onclick = () => {
-    LS.hintLevel = Math.min(LS.hintLevel + 1, 3);
-    const hints = ['Re-read and underline every known quantity.','Set up one equation with a single unknown.','Isolate the unknown and compute step by step.'];
-    $('#hints').innerHTML = hints.slice(0, LS.hintLevel).map((h,i)=>`<div class="hint-step">💡 Hint ${i+1}: ${h}</div>`).join('') + `<div class="live-calc">Hints: <b>${LS.hintLevel}</b></div>`;
+
+  /* hint button — fetch once, reveal progressively */
+  $('#hint-btn').onclick = async () => {
+    const btn = $('#hint-btn');
+    btn.disabled = true;
+
+    if (!LS.hintsData.length) {
+      try {
+        const data  = await apiFetch(`/api/tasks/${t.id}/hints`);
+        LS.hintsData = data.hints || [];
+      } catch {
+        LS.hintsData = ['Work through the problem step by step.'];
+      }
+    }
+
+    const maxHints = LS.hintsData.length;
+    if (LS.hintLevel < maxHints) LS.hintLevel++;
+
+    $('#hints').innerHTML =
+      LS.hintsData.slice(0, LS.hintLevel)
+        .map((h, i) => `<div class="hint-step">💡 Hint ${i + 1}: ${h}</div>`)
+        .join('') +
+      `<div class="live-calc">Hints used: <b>${LS.hintLevel}</b></div>`;
+
+    if (LS.hintLevel < maxHints) btn.disabled = false;
   };
-  $('#sub-btn').onclick = () => {
-    const ok = $('#ans-in').value.trim() === t.answer;
-    $('#fb').innerHTML = ok
-      ? `<div class="feedback ok">✅ Correct! Logged: hints=${LS.hintLevel}, confidence=${LS.confidence}★</div>`
-      : `<div class="feedback no">❌ Not quite — try again. A retry that succeeds counts toward <strong>Perseverance</strong>.</div>`;
+
+  /* submit button — calls API, guards double-click */
+  $('#sub-btn').onclick = async () => {
+    if (LS.submitting || LS.solved) return;
+    LS.submitting = true;
+    const btn = $('#sub-btn');
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+
+    try {
+      const result = await apiFetch(`/api/tasks/${t.id}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId:    sessionStorage.getItem('username'),
+          answer:       $('#ans-in').value.trim(),
+          hintsUsed:    LS.hintLevel,
+          selfRating:   LS.confidence,
+          focusSeconds: LS.focusedFor,
+          totalSeconds: LS.totalSecs,
+          tabSwitches:  LS.tabSwitches,
+          correctStreak: 0,
+        }),
+      });
+
+      if (result.correct) {
+        LS.solved = true;
+        learnCleanup();
+        $('#fb').innerHTML = `<div class="feedback ok">✅ Correct! Saving your session…</div>`;
+        await saveLearnSession(t.id, 'solved');
+      } else {
+        LS.retryCount++;
+        $('#fb').innerHTML = `<div class="feedback no">❌ Not quite — try again. A retry that succeeds counts toward <strong>Perseverance</strong>.</div>`;
+        btn.textContent   = 'Submit Answer';
+        btn.disabled      = false;
+        LS.submitting     = false;
+      }
+    } catch (err) {
+      $('#fb').innerHTML = `<div class="feedback no">⚠ ${err.message}</div>`;
+      btn.textContent   = 'Submit Answer';
+      btn.disabled      = false;
+      LS.submitting     = false;
+    }
   };
-  if (LS._iv) clearInterval(LS._iv);
-  LS._iv = setInterval(() => { if (!LS.focusing) return; LS.focusedFor++; const el=document.getElementById('fsecs'); if(el) el.textContent=LS.focusedFor; else clearInterval(LS._iv); }, 1000);
+
+  /* focus timer — one interval, clears itself when DOM node is gone */
+  LS._iv = setInterval(() => {
+    const el = document.getElementById('fsecs');
+    if (!el) { clearInterval(LS._iv); LS._iv = null; return; }
+    LS.totalSecs++;
+    if (LS.focusing) { LS.focusedFor++; el.textContent = LS.focusedFor; }
+  }, 1000);
+
+  /* tab-visibility tracking */
+  LS._visEl = () => {
+    if (document.hidden) {
+      LS.focusing = false;
+      LS.tabSwitches++;
+    } else {
+      LS.focusing = true;
+    }
+    const dot = document.querySelector('.dot');
+    if (dot) dot.classList.toggle('off', !LS.focusing);
+    const tracker = document.querySelector('.tracker span:nth-child(2)');
+    if (tracker) tracker.textContent = LS.focusing ? 'Focus tracking active' : 'Paused';
+  };
+  document.addEventListener('visibilitychange', LS._visEl);
+}
+
+async function saveLearnSession(taskId, outcome) {
+  const username = sessionStorage.getItem('username');
+  const payload  = {
+    taskId,
+    focusSeconds:  LS.focusedFor,
+    totalSeconds:  LS.totalSecs,
+    tabSwitches:   LS.tabSwitches,
+    correctStreak: 0,
+    hintsUsed:     LS.hintLevel,
+    selfRating:    LS.confidence,
+    outcome,
+    attempts:      LS.retryCount + 1,
+  };
+
+  try {
+    await apiFetch(`/api/students/${username}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    $('#fb').innerHTML = `
+      <div class="feedback ok">
+        ✅ Session recorded!
+        Focus: <b>${LS.focusedFor}s</b> · Hints: <b>${LS.hintLevel}</b> ·
+        Confidence: <b>${LS.confidence}★</b> · Attempts: <b>${LS.retryCount + 1}</b>
+        <br><small>This data will count toward your character metrics.</small>
+      </div>`;
+  } catch (err) {
+    $('#fb').innerHTML = `
+      <div class="feedback ok">
+        ✅ Correct! (Session save failed: ${err.message})
+      </div>`;
+  }
 }
 
 /* ── Teacher shell ── */
 function renderTeacher(tab) {
-  mount(`${topbarHTML('Teacher · Class 8B')}
+  const tName = sessionStorage.getItem('name') || 'Teacher';
+  mount(`${topbarHTML(`Teacher · ${tName}`)}
   <div class="wrap">
     <div class="vivek-sidebar">${PORTRAIT_SVG}
       <div class="content"><h3>The Teacher's Mission</h3>
@@ -491,6 +764,6 @@ function teacherAnalytics() {
 }
 
 /* ─────────────────────────────────────────────────────────
-   6. BOOT
+   7. BOOT
    ───────────────────────────────────────────────────────── */
 renderLogin();

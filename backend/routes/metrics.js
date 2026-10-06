@@ -1,5 +1,6 @@
 const express = require('express');
 const router  = express.Router();
+const { authMiddleware } = require('../middleware/auth');
 
 /* Mirrors the formulas in frontend/js/app.js — keep in sync */
 const _r = n => Math.round(n * 10) / 10;
@@ -53,7 +54,7 @@ function calcConfidence(calibration=[]) {
  *   calibration: [ { rated, actual }, ... ]
  * }
  */
-router.post('/compute', (req, res) => {
+router.post('/compute', authMiddleware, (req, res) => {
   const { today = {}, week = {}, retries = {}, calibration = [] } = req.body;
 
   const conc = calcConcentration(today);

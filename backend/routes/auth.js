@@ -2,6 +2,9 @@ const express  = require('express');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const router   = express.Router();
+const { authMiddleware } = require('../middleware/auth');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-do-not-use-in-production';
 
 /* Demo accounts — replace with DB lookup in production */
 const DEMO_USERS = {
@@ -28,7 +31,7 @@ router.post('/login', async (req, res) => {
 
   const token = jwt.sign(
     { username, role: user.role },
-    process.env.JWT_SECRET || 'dev-secret',
+    JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
@@ -47,17 +50,8 @@ router.post('/logout', (req, res) => {
  * GET /api/auth/me
  * Requires Authorization: Bearer <token>
  */
-router.get('/me', (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  try {
-    const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev-secret');
-    res.json({ username: payload.username, role: payload.role });
-  } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
-  }
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({ username: req.user.username, role: req.user.role });
 });
 
 module.exports = router;
