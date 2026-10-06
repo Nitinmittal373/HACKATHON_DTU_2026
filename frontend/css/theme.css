@@ -1,119 +1,86 @@
 /* ═══════════════════════════════════════════════════════════
-   SHASTRA — Design Tokens & Base Theme
-   Vivekananda palette: Saffron · Maroon · Gold · Sandalwood
+   SHASTRA — Design Tokens  (dark-first)
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Design tokens ── */
 :root {
-  /* Colours */
-  --bg:        #fdf6ec;
-  --surface:   #fffdf7;
-  --ink:       #1c1207;
-  --muted:     #7a6348;
-  --saffron:   #e07020;
-  --deep-saf:  #b85510;
-  --gold:      #c8941a;
-  --maroon:    #6b1a2a;
-  --cream:     #f5e8cc;
-  --line:      #e2cfa4;
-  --good:      #2d6e45;
-  --warn:      #9c3a1a;
-  --om-glow:   rgba(224,112,32,0.18);
+  /* backgrounds */
+  --bg:        #080D19;
+  --bg2:       #0D1322;
+  --sidebar:   #060A14;
+  --surface:   rgba(255,255,255,0.05);
+  --surface-h: rgba(255,255,255,0.08);
+  --surface-a: rgba(217,119,6,0.12);
 
-  /* Typography */
-  --font-head:  'Playfair Display', Georgia, serif;
-  --font-body:  'Hind', 'Noto Sans', system-ui, sans-serif;
-  --font-mono:  'IBM Plex Mono', monospace;
+  /* borders */
+  --border:    rgba(255,255,255,0.07);
+  --border-md: rgba(255,255,255,0.13);
 
-  /* Spacing */
-  --sp-xs: 4px;
-  --sp-sm: 8px;
-  --sp-md: 16px;
-  --sp-lg: 24px;
-  --sp-xl: 40px;
+  /* amber / saffron accent */
+  --amber:     #D97706;
+  --amber-l:   #F59E0B;
+  --amber-xl:  #FCD34D;
+  --amber-dim: rgba(217,119,6,0.15);
+  --amber-glow:rgba(245,158,11,0.30);
 
-  /* Radii */
-  --r-sm:  8px;
-  --r-md:  12px;
-  --r-lg:  16px;
-  --r-xl:  20px;
-  --r-pill: 999px;
+  /* text */
+  --text:      #F1F5F9;
+  --text2:     #CBD5E1;
+  --muted:     #94A3B8;
+  --dim:       #475569;
+
+  /* status */
+  --green:     #10B981;
+  --green-dim: rgba(16,185,129,0.15);
+  --red:       #EF4444;
+  --red-dim:   rgba(239,68,68,0.15);
+  --blue:      #3B82F6;
+  --blue-dim:  rgba(59,130,246,0.15);
+  --purple:    #8B5CF6;
+  --purple-dim:rgba(139,92,246,0.15);
+
+  /* per-metric accent colours */
+  --m-conc:    #F59E0B;
+  --m-rel:     #10B981;
+  --m-pers:    #8B5CF6;
+  --m-conf:    #3B82F6;
+  --m-char:    #EC4899;
+
+  /* typography */
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* layout */
+  --sidebar-w: 240px;
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl:24px;
 }
 
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:      #120a02;
-    --surface: #1e1208;
-    --ink:     #f5e8cc;
-    --muted:   #c4a06a;
-    --saffron: #f08030;
-    --deep-saf:#e06018;
-    --gold:    #e0aa30;
-    --maroon:  #c43050;
-    --cream:   #2a1a08;
-    --line:    #3a2510;
-    --good:    #4a9e65;
-    --warn:    #e06040;
-    --om-glow: rgba(240,128,48,0.22);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg:      #120a02;
-  --surface: #1e1208;
-  --ink:     #f5e8cc;
-  --muted:   #c4a06a;
-  --saffron: #f08030;
-  --deep-saf:#e06018;
-  --gold:    #e0aa30;
-  --maroon:  #c43050;
-  --cream:   #2a1a08;
-  --line:    #3a2510;
-  --good:    #4a9e65;
-  --warn:    #e06040;
-  --om-glow: rgba(240,128,48,0.22);
-  color-scheme: dark;
-}
-
-/* ── Base reset ── */
-*, *::before, *::after { box-sizing: border-box; }
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
 body {
-  margin: 0;
-  padding: 0;
   background: var(--bg);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-body);
   line-height: 1.6;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { font-family: var(--font-head); text-wrap: balance; }
-img         { max-width: 100%; }
-button      { cursor: pointer; font-family: var(--font-body); }
-[hidden]    { display: none !important; }
-canvas      { max-width: 100%; display: block; }
+h1,h2,h3,h4 { font-family: var(--font-head); line-height: 1.2; }
+button { cursor: pointer; font-family: var(--font-body); }
+img    { max-width: 100%; }
+[hidden]{ display: none !important; }
+canvas  { max-width: 100%; display: block; }
+a       { color: inherit; text-decoration: none; }
 
-/* ── Decorative Om border strip ── */
-.border-strip {
-  height: 5px;
-  background: repeating-linear-gradient(90deg,
-    var(--saffron) 0px,  var(--saffron) 18px,
-    var(--gold)    18px, var(--gold)    24px,
-    var(--maroon)  24px, var(--maroon)  30px,
-    var(--gold)    30px, var(--gold)    36px
-  );
-}
-
-/* ── Om symbols ── */
-.om    { font-size: 1.8rem; color: var(--saffron); line-height: 1; }
-.om-lg {
-  font-size: 3.5rem; color: var(--saffron);
-  filter: drop-shadow(0 0 12px var(--om-glow));
-}
-
-/* ── Layout ── */
-.wrap { max-width: 1060px; margin: 0 auto; padding: var(--sp-lg) 20px 64px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: var(--sp-md); }
+/* ── Scrollbar ── */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 3px; }
