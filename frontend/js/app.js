@@ -45,93 +45,55 @@ const QUOTES = {
   }
 };
 
-/* Sample student session data — replace with API calls in production */
+/* Sample student session data — sent to POST /api/metrics/compute for scoring */
 const RAHUL = {
   name: 'Rahul Singh',
   today:  { focusSeconds: 1080, totalSeconds: 1200, tabSwitches: 1, correctStreak: 3 },
   week:   { tasksAttempted: 14, tasksNoHint: 11, hintsThisWeek: 6, hintsLastWeek: 11 },
-  retries: { failuresThisWeek: 5, retriedCount: 5, eventualSuccess: 4, avgRetries: 2.4 },
+  retries: { retriedCount: 5, eventualSuccess: 4, avgRetries: 2.4 },
   calibration: [
-    { task: 'Fractions word problem',    rated: 4, actual: 3 },
-    { task: 'Algebra: solve for x',      rated: 2, actual: 2 },
-    { task: 'Geometry: area of triangle',rated: 5, actual: 4 },
-    { task: 'Percentages',               rated: 3, actual: 2 },
-    { task: 'Linear equations',          rated: 4, actual: 4 }
+    { task: 'Fractions word problem',     rated: 4, actual: 3, difficulty: 3 },
+    { task: 'Algebra: solve for x',       rated: 2, actual: 2, difficulty: 2 },
+    { task: 'Geometry: area of triangle', rated: 5, actual: 4, difficulty: 2 },
+    { task: 'Percentages',                rated: 3, actual: 2, difficulty: 2 },
+    { task: 'Linear equations',           rated: 4, actual: 4, difficulty: 2 }
   ],
   trend: [61, 66, 70, 74, 78]
 };
 
-/* Practice tasks */
-const TASKS = [
-  { title: 'Fractions word problem', sub: 'Arithmetic',
-    q: 'A tank is 3/4 full. If 15 litres more fill it completely, what is the tank\'s total capacity?', answer: '60' },
-  { title: 'Algebra: solve for x',   sub: 'Algebra',
-    q: 'Solve: 3x − 7 = 14', answer: '7' },
-  { title: 'Geometry: triangle area',sub: 'Geometry',
-    q: 'Find the area of a triangle with base 10 cm and height 6 cm.', answer: '30' }
-];
-
 /* ─────────────────────────────────────────────────────────
    2. FORMULAS
+   Scores come from POST /api/metrics/compute — no client-side
+   calculation. This section only holds the display helper r().
    ───────────────────────────────────────────────────────── */
 
 const r = n => Math.round(n * 10) / 10;
 
-function calcConcentration(d) {
-  const fp            = d.focusSeconds / d.totalSeconds;
-  const base          = r(fp * 60);
-  const switchPenalty = Math.min(d.tabSwitches * 4, 15);
-  const streakBonus   = Math.min(d.correctStreak * 5, 25);
-  return { base, switchPenalty, streakBonus, focusPct: fp,
-           total: Math.max(0, Math.min(100, r(base - switchPenalty + streakBonus))) };
+/* Cached API scores — populated by loadScores(), used by dashboard + progress */
+let SCORES = null;
+
+async function loadScores() {
+  if (SCORES) return SCORES;
+  const data = await apiFetch('/api/metrics/compute', {
+    method: 'POST',
+    body: JSON.stringify({
+      today:       RAHUL.today,
+      week:        RAHUL.week,
+      retries:     RAHUL.retries,
+      calibration: RAHUL.calibration,
+    }),
+  });
+  SCORES = data.scores;
+  return SCORES;
 }
 
-function calcReliance(d) {
-  const nhp        = d.tasksNoHint / d.tasksAttempted;
-  const base       = r(nhp * 70);
-  const hd         = d.hintsLastWeek > 0 ? (d.hintsLastWeek - d.hintsThisWeek) / d.hintsLastWeek : 0;
-  const trendBonus = r(Math.max(0, hd) * 30);
-  return { base, trendBonus, noHintPct: nhp, hintDrop: hd,
-           total: Math.max(0, Math.min(100, r(base + trendBonus))) };
-}
-
-function calcPerseverance(d) {
-  const sr   = d.eventualSuccess / d.retriedCount;
-  const base = r(sr * 65);
-  const rf   = d.avgRetries >= 2 && d.avgRetries <= 3.2
-    ? 35 : Math.max(0, 35 - Math.abs(d.avgRetries - 2.5) * 12);
-  return { base, rangeFit: r(rf), successRate: sr,
-           total: Math.max(0, Math.min(100, r(base + r(rf)))) };
-}
-
-function calcConfidence(rows) {
-  const errs = rows.map(r => Math.abs(r.rated - r.actual));
-  const ae   = errs.reduce((a, b) => a + b, 0) / errs.length;
-  const cs   = r(Math.max(0, 100 - ae * 22));
-  const ah   = rows.filter(x => x.rated >= 4).length;
-  const hb   = Math.min(ah * 4, 20);
-  return { avgErr: r(ae), calibScore: cs, hardBonus: hb,
-           total: Math.max(0, Math.min(100, r(cs * 0.8 + hb))) };
-}
-
-function calcCharacter(c, rv, p, co) {
-  return { total: r(c * 0.25 + rv * 0.25 + p * 0.25 + co * 0.25) };
-}
-
-/* Pre-compute Rahul's scores */
-const C  = calcConcentration(RAHUL.today);
-const R  = calcReliance(RAHUL.week);
-const P  = calcPerseverance(RAHUL.retries);
-const CO = calcConfidence(RAHUL.calibration);
-const CH = calcCharacter(C.total, R.total, P.total, CO.total);
-
-/* Class roster — Rahul patched with live scores */
+/* Class roster — demo data for the teacher view */
 const CLASS = [
-  { name: 'Rahul Singh',  conc: C.total,  rel: R.total,  pers: P.total,  overall: CH.total, trend: 'up' },
-  { name: 'Priya Nair',   conc: 52,  rel: 40,  pers: 38,  overall: 44,  trend: 'down', flag: 'risk' },
-  { name: 'Arjun Mehta',  conc: 88,  rel: 91,  pers: 85,  overall: 89,  trend: 'up',   flag: 'star' },
-  { name: 'Sana Qureshi', conc: 67,  rel: 70,  pers: 64,  overall: 67,  trend: 'stable' },
-  { name: 'Vikram Rao',   conc: 60,  rel: 55,  pers: 72,  overall: 62,  trend: 'up' }
+  { name: 'Rahul Singh',  conc: 65, rel: 69, pers: 87, overall: 74, trend: 'up' },
+  { name: 'Priya Nair',   conc: 52, rel: 40, pers: 38, overall: 44, trend: 'down', flag: 'risk' },
+  { name: 'Arjun Mehta',  conc: 88, rel: 91, pers: 85, overall: 89, trend: 'up',   flag: 'star' },
+  { name: 'Sana Qureshi', conc: 67, rel: 70, pers: 64, overall: 67, trend: 'stable' },
+  { name: 'Vikram Rao',   conc: 60, rel: 55, pers: 72, overall: 62, trend: 'up' }
 ];
 
 const avg = k => r(CLASS.reduce((a, s) => a + s[k], 0) / CLASS.length);
@@ -394,26 +356,46 @@ function renderStudent(tab) {
   if (tab === 'progress')  studentProgress();
 }
 
-function studentDashboard() {
+async function studentDashboard() {
   $('#tabbody').innerHTML = `
     <div class="q-banner"><span class="om" style="font-size:2.2rem;filter:drop-shadow(0 0 6px #ffb347)">ॐ</span>
       <div><div class="q-text">"${QUOTES.character.q}"</div><div class="q-attr">— ${QUOTES.character.src}</div></div>
     </div>
-    <p class="section-note">Every score is computed from your actual session data — tap <strong>"How is this calculated?"</strong> to see the exact math.</p>
+    <p class="section-note" id="dash-note" style="opacity:.5">Computing scores…</p>
+    <div id="dash-grid"></div>`;
+
+  let s;
+  try {
+    s = await loadScores();
+  } catch (err) {
+    $('#dash-note').textContent = `⚠ Could not load scores: ${err.message}`;
+    return;
+  }
+
+  const C  = s.concentration;
+  const R  = s.reliance;
+  const P  = s.perseverance;
+  const CO = s.confidence;
+  const CH = s.character;
+
+  $('#dash-note').textContent = 'Every score is computed server-side from your session data — tap "How is this calculated?" to see the exact math.';
+  $('#dash-note').style.opacity = '';
+
+  $('#dash-grid').innerHTML = `
     <div class="grid">
-      ${metricCard('concentration', C.total, Math.round(C.total-70)+' this week', true,
-        [[`Focus time: ${RAHUL.today.focusSeconds}s / ${RAHUL.today.totalSeconds}s (${r(C.focusPct*100)}%) × 60`, C.base],
-         [`− Tab switches (${RAHUL.today.tabSwitches} × 4 pts)`, '−'+C.switchPenalty],
-         [`+ Answer streak bonus (${RAHUL.today.correctStreak} × 5 pts)`, '+'+C.streakBonus]], 'Concentration score')}
-      ${metricCard('reliance', R.total, r(R.hintDrop*100)+'% fewer hints', true,
+      ${metricCard('concentration', C.total, Math.round(C.total - 70) + ' this week', true,
+        [[`Focus time: ${RAHUL.today.focusSeconds}s / ${RAHUL.today.totalSeconds}s (${r(C.focusPct)}%) × 60`, C.base],
+         [`− Tab switches (${RAHUL.today.tabSwitches} × 4 pts)`, '−' + C.switchPenalty],
+         [`+ Answer streak bonus (${RAHUL.today.correctStreak} × 5 pts)`, '+' + C.streakBonus]], 'Concentration score')}
+      ${metricCard('reliance', R.total, r(R.hintDrop) + '% fewer hints', true,
         [[`Hint-free tasks: ${RAHUL.week.tasksNoHint}/${RAHUL.week.tasksAttempted} × 70`, R.base],
-         [`+ Hint reduction vs last week`, '+'+R.trendBonus]], 'Self-reliance score')}
-      ${metricCard('perseverance', P.total, '4 of 5 retries succeeded', true,
-        [[`Success after retry: ${RAHUL.retries.eventualSuccess}/${RAHUL.retries.retriedCount} × 65`, P.base],
-         [`+ Healthy retry range (avg ${RAHUL.retries.avgRetries}, ideal 2–3.2)`, '+'+P.rangeFit]], 'Perseverance score')}
-      ${metricCard('confidence', CO.total, r(CO.avgErr)+' avg error', CO.avgErr<1.5,
+         [`+ Hint reduction vs last week`, '+' + R.trendBonus]], 'Self-reliance score')}
+      ${metricCard('perseverance', P.total, r(P.successRate) + '% success on retries', true,
+        [[`Success after retry: ${r(P.successRate)}% × 65`, P.base],
+         [`+ Healthy retry range (avg ${RAHUL.retries.avgRetries}, ideal 2–3.2)`, '+' + P.rangeFit]], 'Perseverance score')}
+      ${metricCard('confidence', CO.total, r(CO.avgErr) + ' avg error', CO.avgErr < 1.5,
         [[`Calibration score × 0.8`, CO.calibScore],
-         [`+ Hard task bonus`, '+'+CO.hardBonus]], 'Confidence score')}
+         [`+ Hard task bonus (difficulty ≥ 3)`, '+' + CO.hardBonus]], 'Confidence score')}
     </div>
     <div class="card" style="margin-top:18px">
       <div class="m-head"><div class="m-icon-wrap">${QUOTES.character.icon}</div>
@@ -424,10 +406,10 @@ function studentDashboard() {
       <div class="m-quote">"${QUOTES.character.q}"<br><span style="font-size:.7rem">— ${QUOTES.character.src}</span></div>
       <button class="howbtn" data-target="f-character">How is this calculated? ▾</button>
       <div class="formula" id="f-character" hidden>
-        <div class="row"><span>Concentration × 25%</span><b>${r(C.total*.25)}</b></div>
-        <div class="row"><span>Self-Reliance × 25%</span><b>${r(R.total*.25)}</b></div>
-        <div class="row"><span>Perseverance × 25%</span><b>${r(P.total*.25)}</b></div>
-        <div class="row"><span>Confidence × 25%</span><b>${r(CO.total*.25)}</b></div>
+        <div class="row"><span>Concentration × 25%</span><b>${r(C.total * .25)}</b></div>
+        <div class="row"><span>Self-Reliance × 25%</span><b>${r(R.total * .25)}</b></div>
+        <div class="row"><span>Perseverance × 25%</span><b>${r(P.total * .25)}</b></div>
+        <div class="row"><span>Confidence × 25%</span><b>${r(CO.total * .25)}</b></div>
         <div class="total"><span>Character Score</span><span>${CH.total} / 100</span></div>
       </div>
     </div>`;
@@ -435,6 +417,7 @@ function studentDashboard() {
 }
 
 function studentProgress() {
+  const avgErr = SCORES ? r(SCORES.confidence.avgErr) : '—';
   $('#tabbody').innerHTML = `
     <p class="section-note">Five weeks of concentration scores — raw data, nothing adjusted.</p>
     <div class="card" style="padding:16px"><canvas id="trendChart" height="160"></canvas></div>
@@ -444,7 +427,7 @@ function studentProgress() {
         <div class="row"><span>Hints used (last → this week)</span><b>${RAHUL.week.hintsLastWeek} → ${RAHUL.week.hintsThisWeek}</b></div>
         <div class="row"><span>Hint-free tasks</span><b>${RAHUL.week.tasksNoHint}/${RAHUL.week.tasksAttempted}</b></div>
         <div class="row"><span>Retries that eventually succeeded</span><b>${RAHUL.retries.eventualSuccess}/${RAHUL.retries.retriedCount}</b></div>
-        <div class="row"><span>Avg self-rating error</span><b>${r(CO.avgErr)} pts</b></div>
+        <div class="row"><span>Avg self-rating error</span><b>${avgErr} pts</b></div>
       </div>
     </div>`;
   requestAnimationFrame(() => drawLine($('#trendChart').getContext('2d'), RAHUL.trend, ['Wk1','Wk2','Wk3','Wk4','Wk5']));
