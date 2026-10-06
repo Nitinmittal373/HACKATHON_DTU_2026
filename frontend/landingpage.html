@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ॐ Shastra — Awakening Education</title>
+  <meta name="description" content="An AI-powered learning platform inspired by Swami Vivekananda's teachings to measure what truly matters — your growth, character, and potential." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    img  { display: block; max-width: 100%; }
+    a    { text-decoration: none; color: inherit; }
+    button { cursor: pointer; border: none; background: none; font: inherit; }
+
+    /* ─── Variables ──────────────────────────────────────────── */
+    :root {
+      --navy:       #071522;
+      --deep-navy:  #03111d;
+      --gold:       #F4B84A;
+      --saffron:    #E59A2F;
+      --ivory:      #F7F1E6;
+      --ivory-78:   rgba(247, 241, 230, 0.78);
+      --ivory-50:   rgba(247, 241, 230, 0.50);
+      --ivory-30:   rgba(247, 241, 230, 0.30);
+      --gold-glow:  rgba(244, 184, 74, 0.25);
+
+      --serif:  'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+      --sans:   'Inter', system-ui, sans-serif;
+    }
+
+    /* ─── Base ───────────────────────────────────────────────── */
+    body {
+      font-family: var(--sans);
+      background: var(--deep-navy);
+      color: var(--ivory);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Navbar ─────────────────────────────────────────────── */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(24px, 4vw, 64px);
+      height: 72px;
+      background: linear-gradient(180deg, rgba(3,17,29,0.82) 0%, transparent 100%);
+      backdrop-filter: blur(0px);
+      transition: background 0.4s, backdrop-filter 0.4s;
+    }
+    .navbar.scrolled {
+      background: rgba(3, 17, 29, 0.94);
+      backdrop-filter: blur(14px);
+    }
+
+    .navbar-brand {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .navbar-brand .om   { color: var(--gold); }
+    .navbar-brand .name { color: var(--ivory); }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: clamp(20px, 3vw, 40px);
+      list-style: none;
+    }
+    .navbar-links a {
+      font-size: 0.88rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--ivory-78);
+      position: relative;
+      padding-bottom: 2px;
+      transition: color 0.25s;
+    }
+    .navbar-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 0; right: 100%;
+      height: 1px;
+      background: var(--gold);
+      transition: right 0.3s ease;
+    }
+    .navbar-links a:hover { color: var(--ivory); }
+    .navbar-links a:hover::after { right: 0; }
+
+    .navbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+    .btn-login {
+      font-size: 0.88rem;
+      font-weight: 400;
+      color: var(--ivory-78);
+      letter-spacing: 0.04em;
+      transition: color 0.25s;
+    }
+    .btn-login:hover { color: var(--ivory); }
+
+    .btn-getstarted {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--ivory);
+      padding: 8px 20px;
+      border-radius: 100px;
+      border: 1px solid rgba(244, 184, 74, 0.45);
+      background: rgba(244, 184, 74, 0.08);
+      transition: border-color 0.25s, background 0.25s, color 0.25s;
+    }
+    .btn-getstarted:hover {
+      border-color: var(--gold);
+      background: rgba(244, 184, 74, 0.16);
+      color: var(--gold);
+    }
+
+    /* hamburger — hidden on desktop */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px;
+      cursor: pointer;
+      aria-label: "Open menu";
+    }
+    .hamburger span {
+      display: block;
+      width: 22px; height: 1.5px;
+      background: var(--ivory-78);
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+    /* mobile nav drawer */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: 72px; left: 0; right: 0;
+      background: rgba(3, 17, 29, 0.97);
+      backdrop-filter: blur(20px);
+      padding: 28px clamp(24px, 6vw, 48px) 36px;
+      z-index: 99;
+      border-top: 1px solid rgba(244, 184, 74, 0.12);
+      animation: slideDown 0.25s ease;
+    }
+    .mobile-nav.open { display: block; }
+    .mobile-nav ul { list-style: none; margin-bottom: 28px; }
+    .mobile-nav ul li { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .mobile-nav ul a { font-size: 1.05rem; color: var(--ivory-78); }
+    .mobile-nav .mobile-actions { display: flex; flex-direction: column; gap: 14px; }
+    .mobile-nav .btn-getstarted { justify-content: center; padding: 12px 20px; font-size: 0.9rem; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Hero ───────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      width: 100%;
+      min-height: 100vh;
+      min-height: max(100vh, 720px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      background-image: url("assets/hero-bg.png");
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      overflow: hidden;
+    }
+
+    /* directional gradient overlay */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(
+          90deg,
+          rgba(3, 18, 31, 0.92)  0%,
+          rgba(3, 18, 31, 0.68) 30%,
+          rgba(3, 18, 31, 0.22) 58%,
+          rgba(229, 154, 47, 0.04) 100%
+        );
+      pointer-events: none;
+      z-index: 1;
+    }
+    /* subtle bottom fade for journey strip */
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 200px;
+      background: linear-gradient(to top, rgba(3, 17, 29, 0.88), transparent);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 clamp(24px, 4vw, 80px);
+      padding-top: 72px; /* navbar height */
+
+      display: flex;
+      align-items: center;
+      min-height: inherit;
+    }
+
+    /* ─── Hero Content (left) ────────────────────────────────── */
+    .hero-content {
+      max-width: 620px;
+      padding: 80px 0 140px;
+    }
+
+    .hero-brand {
+      font-family: var(--serif);
+      margin-bottom: 28px;
+    }
+    .hero-brand .om-large {
+      display: block;
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .hero-brand .brand-name {
+      display: block;
+      font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+      font-weight: 600;
+      color: var(--ivory);
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .hero-brand .brand-tagline {
+      display: block;
+      font-family: var(--sans);
+      font-size: clamp(0.75rem, 1vw, 0.88rem);
+      font-weight: 300;
+      color: var(--ivory-50);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    /* thin gold divider */
+    .hero-divider {
+      width: 48px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      margin-bottom: 28px;
+    }
+
+    .hero-headline {
+      font-family: var(--serif);
+      font-size: clamp(38px, 5vw, 70px);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--ivory);
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+    .hero-headline .accent {
+      color: var(--gold);
+    }
+
+    .hero-desc {
+      font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+      color: var(--ivory-78);
+      line-height: 1.7;
+      max-width: 520px;
+      margin-bottom: 40px;
+    }
+
+    /* ─── Buttons ────────────────────────────────────────────── */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--deep-navy);
+      background: var(--gold);
+      padding: 14px 30px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s, background 0.25s;
+      box-shadow: 0 0 0 rgba(244, 184, 74, 0);
+    }
+    .btn-primary .arrow {
+      transition: transform 0.3s ease;
+    }
+    .btn-primary:hover {
+      background: #f9c95e;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(244, 184, 74, 0.35);
+    }
+    .btn-primary:hover .arrow {
+      transform: translateX(4px);
+    }
+    .btn-primary:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: var(--ivory-78);
+      background: transparent;
+      padding: 13px 26px;
+      border-radius: 4px;
+      border: 1px solid rgba(247, 241, 230, 0.28);
+      transition: border-color 0.25s, color 0.25s, background 0.25s;
+    }
+    .btn-secondary:hover {
+      border-color: var(--ivory-78);
+      color: var(--ivory);
+      background: rgba(247, 241, 230, 0.06);
+    }
+    .btn-secondary:focus-visible {
+      outline: 2px solid var(--ivory-50);
+      outline-offset: 3px;
+    }
+
+    .hero-microcopy {
+      font-size: 0.78rem;
+      color: var(--ivory-30);
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
+    /* ─── Quote (right side) ─────────────────────────────────── */
+    .hero-quote {
+      position: absolute;
+      right: clamp(32px, 5vw, 96px);
+      bottom: clamp(160px, 18vh, 260px);
+      max-width: 260px;
+      text-align: right;
+      z-index: 3;
+    }
+    .quote-text {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      font-weight: 400;
+      color: var(--ivory-78);
+      line-height: 1.65;
+      margin-bottom: 12px;
+    }
+    .quote-author {
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      opacity: 0.85;
+    }
+
+    /* ─── Journey Strip ──────────────────────────────────────── */
+    .journey-strip {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 3;
+      padding: 0 clamp(24px, 4vw, 80px) 40px;
+    }
+    .journey-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .journey-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+    }
+    .journey-item:not(:last-child)::after {
+      content: '→';
+      font-size: 0.75rem;
+      color: var(--gold);
+      opacity: 0.4;
+      flex-shrink: 0;
+      margin: 0 8px;
+    }
+    .journey-num {
+      font-family: var(--sans);
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      opacity: 0.7;
+    }
+    .journey-label {
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: var(--ivory-50);
+      text-transform: uppercase;
+    }
+    .journey-sep {
+      width: 1px;
+      height: 32px;
+      background: rgba(247, 241, 230, 0.10);
+      margin: 0 clamp(16px, 3vw, 40px);
+      flex-shrink: 0;
+    }
+
+    /* ─── Animations ─────────────────────────────────────────── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .anim-navbar   { animation: fadeDown 0.7s ease both; }
+    .anim-brand    { animation: fadeUp  0.7s ease 0.15s both; }
+    .anim-divider  { animation: fadeIn  0.6s ease 0.30s both; }
+    .anim-headline { animation: fadeUp  0.7s ease 0.40s both; }
+    .anim-desc     { animation: fadeUp  0.7s ease 0.55s both; }
+    .anim-actions  { animation: fadeUp  0.7s ease 0.70s both; }
+    .anim-micro    { animation: fadeIn  0.6s ease 0.85s both; }
+    .anim-quote    { animation: fadeIn  1.0s ease 1.00s both; }
+    .anim-journey  { animation: fadeIn  0.8s ease 1.10s both; }
+
+    /* ─── Responsive ─────────────────────────────────────────── */
+
+    /* Laptop 1280 */
+    @media (max-width: 1280px) {
+      .hero-quote {
+        right: 32px;
+        max-width: 220px;
+      }
+    }
+
+    /* Tablet 768 */
+    @media (max-width: 900px) {
+      .navbar-links,
+      .navbar-actions { display: none; }
+      .hamburger { display: flex; }
+
+      .hero {
+        background-position: 68% center;
+      }
+
+      .hero-quote {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        max-width: 100%;
+        text-align: left;
+        margin-top: 40px;
+      }
+
+      .hero-content {
+        max-width: 100%;
+        padding-bottom: 80px;
+      }
+
+      .journey-sep { display: none; }
+      .journey-inner { gap: 12px; }
+      .journey-item { flex: none; }
+      .journey-item:not(:last-child)::after { margin: 0 4px; }
+    }
+
+    /* Mobile 390 */
+    @media (max-width: 600px) {
+      .hero {
+        background-position: 62% center;
+      }
+
+      .hero-inner {
+        padding: 0 20px;
+        padding-top: 72px;
+        align-items: flex-start;
+      }
+
+      .hero-content {
+        padding-top: 52px;
+        padding-bottom: 120px;
+      }
+
+      .hero-actions { flex-direction: column; align-items: flex-start; }
+      .btn-primary,
+      .btn-secondary { width: 100%; justify-content: center; }
+
+      .journey-strip { padding-bottom: 24px; }
+      .journey-inner { flex-wrap: wrap; gap: 16px; }
+      .journey-item:not(:last-child)::after { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────── -->
+<header class="navbar anim-navbar" role="banner" id="navbar">
+  <a class="navbar-brand" href="landingpage.html" aria-label="Shastra home">
+    <span class="om">ॐ</span><span class="name"> Shastra</span>
+  </a>
+
+  <nav aria-label="Primary navigation">
+    <ul class="navbar-links">
+      <li><a href="#home">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#impact">Impact</a></li>
+    </ul>
+  </nav>
+
+  <div class="navbar-actions">
+    <a class="btn-login" href="index.html">Login</a>
+    <a class="btn-getstarted" href="index.html?go=login" aria-label="Get started with Shastra">
+      Get Started <span aria-hidden="true">→</span>
+    </a>
+  </div>
+
+  <!-- Mobile hamburger -->
+  <button class="hamburger" id="hamburgerBtn" aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileNav">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- Mobile nav drawer -->
+<nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+  <ul>
+    <li><a href="#home">Home</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#impact">Impact</a></li>
+  </ul>
+  <div class="mobile-actions">
+    <a class="btn-login" href="index.html">Login</a>
+    <a class="btn-getstarted" href="index.html?go=login">Get Started →</a>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
+<main>
+  <section class="hero" id="home" aria-label="Hero section">
+    <div class="hero-inner">
+
+      <!-- Left: primary content -->
+      <div class="hero-content">
+
+        <!-- Brand lockup -->
+        <div class="hero-brand anim-brand" aria-label="Shastra — Awakening Education">
+          <span class="om-large" aria-hidden="true">ॐ</span>
+          <span class="brand-name">Shastra</span>
+          <span class="brand-tagline">Awakening Education</span>
+        </div>
+
+        <div class="hero-divider anim-divider" role="presentation"></div>
+
+        <!-- Main headline -->
+        <h1 class="hero-headline anim-headline">
+          Beyond Marks.<br />
+          Towards a <span class="accent">Stronger You.</span>
+        </h1>
+
+        <!-- Description -->
+        <p class="hero-desc anim-desc">
+          An AI-powered learning platform inspired by<br />
+          Swami Vivekananda's teachings to measure what truly<br />
+          matters — your growth, character, and potential.
+        </p>
+
+        <!-- CTA buttons -->
+        <div class="hero-actions anim-actions">
+          <a class="btn-primary" href="index.html?go=login" role="button" aria-label="Test yourself now">
+            Test Yourself
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="btn-secondary" href="#how-it-works" role="button" aria-label="Watch a product demo">
+            <span aria-hidden="true">▶</span> Watch Demo
+          </a>
+        </div>
+
+        <!-- Microcopy -->
+        <p class="hero-microcopy anim-micro">
+          A journey of self-discovery begins with one step.
+        </p>
+
+        <!-- Quote — shown inline on tablet/mobile -->
+        <blockquote class="hero-quote anim-quote" aria-label="Quote by Swami Vivekananda" style="display:none" id="quoteInline">
+          <p class="quote-text">
+            "Arise, awake,<br />
+            and stop not<br />
+            till the goal<br />
+            is reached."
+          </p>
+          <cite class="quote-author">— Swami Vivekananda</cite>
+        </blockquote>
+
+      </div><!-- /hero-content -->
+
+    </div><!-- /hero-inner -->
+
+    <!-- Quote — absolutely positioned on desktop -->
+    <blockquote class="hero-quote anim-quote" aria-label="Quote by Swami Vivekananda" id="quoteAbsolute">
+      <p class="quote-text">
+        "Arise, awake,<br />
+        and stop not<br />
+        till the goal<br />
+        is reached."
+      </p>
+      <cite class="quote-author">— Swami Vivekananda</cite>
+    </blockquote>
+
+    <!-- Journey strip -->
+    <div class="journey-strip anim-journey" aria-label="Product journey">
+      <div class="journey-inner">
+        <div class="journey-item">
+          <span class="journey-num">01</span>
+          <span class="journey-label">Discover</span>
+        </div>
+        <div class="journey-sep" role="presentation"></div>
+        <div class="journey-item">
+          <span class="journey-num">02</span>
+          <span class="journey-label">Experience</span>
+        </div>
+        <div class="journey-sep" role="presentation"></div>
+        <div class="journey-item">
+          <span class="journey-num">03</span>
+          <span class="journey-label">Grow</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ── Scripts ────────────────────────────────────────────── -->
+<script>
+  /* Navbar scroll state */
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 40);
+  }, { passive: true });
+
+  /* Mobile hamburger */
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const mobileNav    = document.getElementById('mobileNav');
+  hamburgerBtn.addEventListener('click', () => {
+    const isOpen = mobileNav.classList.toggle('open');
+    hamburgerBtn.classList.toggle('open', isOpen);
+    hamburgerBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+
+  /* Close mobile nav on link click */
+  mobileNav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileNav.classList.remove('open');
+      hamburgerBtn.classList.remove('open');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    });
+  });
+
+  /* Quote visibility: on mobile, swap to inline quote */
+  const quoteAbsolute = document.getElementById('quoteAbsolute');
+  const quoteInline   = document.getElementById('quoteInline');
+
+  function handleQuoteLayout() {
+    if (window.innerWidth <= 900) {
+      quoteAbsolute.style.display = 'none';
+      quoteInline.style.display   = 'block';
+    } else {
+      quoteAbsolute.style.display = '';
+      quoteInline.style.display   = 'none';
+    }
+  }
+  handleQuoteLayout();
+  window.addEventListener('resize', handleQuoteLayout, { passive: true });
+
+  /* Very subtle background parallax on desktop */
+  const hero = document.querySelector('.hero');
+  if (window.matchMedia('(min-width: 901px)').matches) {
+    window.addEventListener('scroll', () => {
+      const offset = window.scrollY * 0.18;
+      hero.style.backgroundPositionY = `calc(50% + ${offset}px)`;
+    }, { passive: true });
+  }
+</script>
+
+</body>
+</html>

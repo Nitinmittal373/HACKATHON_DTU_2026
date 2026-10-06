@@ -1134,4 +1134,14 @@ function teacherSettings() {
 /* ─────────────────────────────────────────────────────────
    7. BOOT
    ───────────────────────────────────────────────────────── */
-renderLanding();
+(function boot() {
+  const params = new URLSearchParams(window.location.search);
+  /* coming from landingpage.html CTA → go straight to login */
+  if (params.get('go') === 'login') {
+    /* clean the URL so a back/refresh doesn't re-trigger */
+    history.replaceState(null, '', window.location.pathname);
+    renderLogin();
+  } else {
+    renderLanding();
+  }
+})();
