@@ -203,10 +203,10 @@ const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mount = html => { document.getElementById('app').innerHTML = html; };
 
-/* Inline SVG portrait of Swami Vivekananda */
-const VIVEK_SM = `<svg viewBox="0 0 60 74" xmlns="http://www.w3.org/2000/svg" width="60" height="74"><defs><radialGradient id="vsm_bg" cx="50%" cy="50%"><stop offset="0%" stop-color="#6b2d10"/><stop offset="100%" stop-color="#1a0804"/></radialGradient></defs><rect width="60" height="74" rx="10" fill="url(#vsm_bg)"/><path d="M6 74 Q12 46 30 42 Q48 46 54 74Z" fill="#D97706" opacity=".85"/><ellipse cx="30" cy="28" rx="15" ry="18" fill="#c87840"/><path d="M15 24 Q16 8 30 6 Q44 8 45 24 Q43 17 30 16 Q17 17 15 24Z" fill="#7a1a1a"/><ellipse cx="23" cy="28" rx="4" ry="2.5" fill="#1a0804"/><ellipse cx="37" cy="28" rx="4" ry="2.5" fill="#1a0804"/><path d="M24 35 Q30 39 36 35" stroke="#1a0804" stroke-width="2" fill="none" stroke-linecap="round"/><text x="22" y="68" font-size="11" fill="#FCD34D" font-family="serif" opacity=".9">ॐ</text></svg>`;
+/* Real Vivekananda photograph */
+const VIVEK_SM = `<img src="assets/vivekananda.png" alt="Swami Vivekananda" style="width:70px;height:85px;object-fit:cover;object-position:top center;border-radius:10px;border:2px solid rgba(217,119,6,.5)">`;
 
-const VIVEK_LG = `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" width="200" height="260"><defs><radialGradient id="vlg_bg" cx="50%" cy="35%"><stop offset="0%" stop-color="#5a2208"/><stop offset="100%" stop-color="#0e0402"/></radialGradient><radialGradient id="vlg_skin" cx="50%" cy="40%"><stop offset="0%" stop-color="#d08040"/><stop offset="100%" stop-color="#904820"/></radialGradient></defs><rect width="200" height="260" rx="14" fill="url(#vlg_bg)"/><path d="M20 260 Q30 165 100 155 Q170 165 180 260Z" fill="#D97706" opacity=".9"/><path d="M60 160 Q100 185 140 160 L145 200 Q100 220 55 200Z" fill="#c07838"/><ellipse cx="100" cy="100" rx="48" ry="58" fill="url(#vlg_skin)"/><path d="M52 88 Q54 34 100 30 Q146 34 148 88 Q144 62 100 58 Q56 62 52 88Z" fill="#6a1a18"/><path d="M52 88 Q54 56 100 52 Q146 56 148 88" fill="none" stroke="#D97706" stroke-width="2.5" opacity=".6"/><ellipse cx="80" cy="97" rx="9" ry="6" fill="#0e0402"/><ellipse cx="120" cy="97" rx="9" ry="6" fill="#0e0402"/><circle cx="82" cy="95" r="2.5" fill="#fff" opacity=".6"/><circle cx="122" cy="95" r="2.5" fill="#fff" opacity=".6"/><path d="M68 88 Q80 82 92 88" stroke="#3a1208" stroke-width="2.5" fill="none"/><path d="M108 88 Q120 82 132 88" stroke="#3a1208" stroke-width="2.5" fill="none"/><path d="M94 102 Q92 112 100 115 Q108 112 106 102" stroke="#904820" stroke-width="1.5" fill="none"/><path d="M82 122 Q100 128 118 122" stroke="#1a0804" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M86 130 Q100 135 114 130" stroke="#7a3818" stroke-width="2" fill="none"/><ellipse cx="50" cy="102" rx="6" ry="9" fill="#b06030"/><ellipse cx="150" cy="102" rx="6" ry="9" fill="#b06030"/><text x="72" y="248" font-size="28" fill="#FCD34D" font-family="serif" opacity=".95">ॐ</text></svg>`;
+const VIVEK_LG = `<img src="assets/vivekananda.png" alt="Swami Vivekananda" style="width:320px;height:400px;object-fit:cover;object-position:top center;border-radius:16px;box-shadow:0 0 60px rgba(217,119,6,.25),0 0 120px rgba(180,60,10,.15)">`;
 
 function sidebarHTML(activeTab, role) {
   const name     = sessionStorage.getItem('name') || (role === 'teacher' ? 'Teacher' : 'Student');
@@ -388,8 +388,13 @@ function renderLogin() {
           <p class="auth-left-quote">"All the power is within you. You can do anything and everything."</p>
           <p class="auth-left-attr">— Swami Vivekananda</p>
         </div>
-        <div class="auth-left-portrait">${VIVEK_SM}</div>
-        <div style="margin-top:20px;font-size:.75rem;color:rgba(200,137,74,.6);text-align:center">
+        <div class="auth-left-portrait" style="flex:1;display:flex;align-items:center;justify-content:center;margin-top:24px">
+          <img src="assets/vivekananda.png" alt="Swami Vivekananda"
+            style="width:160px;height:200px;object-fit:cover;object-position:top center;
+                   border-radius:14px;border:2px solid rgba(217,119,6,.4);
+                   box-shadow:0 0 40px rgba(200,80,10,.35)">
+        </div>
+        <div style="margin-top:16px;font-size:.75rem;color:rgba(200,137,74,.6);text-align:center">
           Education is the manifestation of the perfection already in man.
         </div>
       </div>
@@ -651,15 +656,37 @@ async function studentProgress() {
 
 /* ── Quotes ── */
 function studentQuotes() {
-  const all = Object.values(QUOTES);
+  const all   = Object.values(QUOTES);
+  const keys  = Object.keys(QUOTES);
   $('#main-content').innerHTML = `
     <div class="section-head">
       <h2>Vivekananda's Wisdom</h2>
       <p>Let these words guide your journey.</p>
     </div>
+
+    <!-- Feature banner with real photo -->
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:center;
+                background:linear-gradient(135deg,rgba(120,40,8,.55) 0%,rgba(20,10,5,.8) 100%);
+                border:1px solid rgba(217,119,6,.2);border-radius:18px;padding:28px;margin-bottom:28px;overflow:hidden">
+      <img src="assets/vivekananda.png" alt="Swami Vivekananda"
+        style="width:200px;height:240px;object-fit:cover;object-position:top center;
+               border-radius:12px;border:2px solid rgba(217,119,6,.4);
+               box-shadow:0 0 40px rgba(200,80,10,.4)">
+      <div>
+        <div style="font-size:2.5rem;color:var(--amber-l);margin-bottom:8px;filter:drop-shadow(0 0 8px rgba(245,158,11,.4))">ॐ</div>
+        <div style="font-family:var(--font-head);font-style:italic;font-size:1.3rem;color:#f5debb;line-height:1.6;margin-bottom:14px">
+          "Arise, awake, and stop not till the goal is reached."
+        </div>
+        <div style="font-size:.85rem;color:var(--amber-l)">— Swami Vivekananda</div>
+        <div style="margin-top:10px;font-size:.8rem;color:var(--muted)">
+          Inspiring millions since 1863. Shastra is built on his vision of education that builds character, not just knowledge.
+        </div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
-      ${all.map(q => `
-        <div class="card" style="border-left:3px solid ${METRIC_CFG[Object.keys(QUOTES).find(k=>QUOTES[k]===q)].color}">
+      ${all.map((q, i) => `
+        <div class="card" style="border-left:3px solid ${METRIC_CFG[keys[i]].color}">
           <div style="font-size:1.5rem;margin-bottom:10px">${q.icon}</div>
           <div style="font-family:var(--font-head);font-style:italic;font-size:1rem;color:var(--text2);line-height:1.6;margin-bottom:12px">"${q.q}"</div>
           <div style="font-size:.78rem;color:var(--muted)">— ${q.src}</div>
