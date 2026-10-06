@@ -214,11 +214,12 @@ function sidebarHTML(activeTab, role) {
   const initial  = name.charAt(0).toUpperCase();
 
   const studentNav = [
-    { id:'dashboard', icon: IC.dashboard,  label:'Dashboard'    },
-    { id:'learn',     icon: IC.tasks,      label:'My Tasks'     },
-    { id:'progress',  icon: IC.progress,   label:'My Progress'  },
-    { id:'quotes',    icon: IC.quotes,     label:'Quotes'       },
-    { id:'settings',  icon: IC.settings,   label:'Settings'     },
+    { id:'dashboard',  icon: IC.dashboard, label:'Dashboard'   },
+    { id:'learn',      icon: IC.tasks,     label:'My Tasks'    },
+    { id:'activities', icon: IC.focus,     label:'Activities'  },
+    { id:'progress',   icon: IC.progress,  label:'My Progress' },
+    { id:'quotes',     icon: IC.quotes,    label:'Quotes'      },
+    { id:'settings',   icon: IC.settings,  label:'Settings'    },
   ];
   const teacherNav = [
     { id:'overview',  icon: IC.dashboard,  label:'Dashboard'    },
@@ -500,11 +501,12 @@ function renderStudent(tab) {
   </div>`);
   bindSidebarNav('student');
 
-  if (tab === 'dashboard') studentDashboard();
-  if (tab === 'learn')     studentLearn();
-  if (tab === 'progress')  studentProgress();
-  if (tab === 'quotes')    studentQuotes();
-  if (tab === 'settings')  studentSettings();
+  if (tab === 'dashboard')  studentDashboard();
+  if (tab === 'learn')      studentLearn();
+  if (tab === 'activities') studentActivities();
+  if (tab === 'progress')   studentProgress();
+  if (tab === 'quotes')     studentQuotes();
+  if (tab === 'settings')   studentSettings();
 }
 
 /* ── Dashboard ── */
@@ -559,6 +561,32 @@ async function studentDashboard() {
           Start Learning ${IC.arrow}
         </button>
       </div>
+    </div>
+
+    <!-- Interactive Assessment Activities Quick Section -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span>Character &amp; Cognitive Assessments</span>
+        <button class="btn btn-ghost btn-sm" id="dash-all-act-btn">View Activities ${IC.arrow}</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:10px">
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <div style="font-size:.74rem;font-weight:700;color:var(--amber-l);text-transform:uppercase;letter-spacing:.05em">Mind &amp; Focus</div>
+            <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-top:2px">Focus Grid</div>
+            <div style="font-size:.8rem;color:var(--muted);margin-top:2px" id="dash-fg-score-text">Measuring Concentration</div>
+          </div>
+          <button class="btn btn-amber btn-sm" id="dash-launch-fg-btn">Assess</button>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <div style="font-size:.74rem;font-weight:700;color:#A78BFA;text-transform:uppercase;letter-spacing:.05em">Character &amp; Growth</div>
+            <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-top:2px">Keep Going</div>
+            <div style="font-size:.8rem;color:var(--muted);margin-top:2px" id="dash-kg-score-text">Measuring Perseverance</div>
+          </div>
+          <button class="btn btn-amber btn-sm" style="background:linear-gradient(135deg,#7C3AED,#6D28D9)" id="dash-launch-kg-btn">Assess</button>
+        </div>
+      </div>
     </div>`;
 
   /* draw growth chart */
@@ -573,6 +601,22 @@ async function studentDashboard() {
   });
 
   $('#start-learn-btn').onclick = () => renderStudent('learn');
+
+  /* wire up activity buttons */
+  const actScores = getActivityScores();
+  if (actScores['focus-grid']) {
+    const fg = actScores['focus-grid'];
+    if ($('#dash-fg-score-text')) $('#dash-fg-score-text').innerHTML = `Last Score: <strong>${fg.score}/100</strong> (${fg.category})`;
+    if ($('#dash-launch-fg-btn')) $('#dash-launch-fg-btn').textContent = 'Retake';
+  }
+  if (actScores['keep-going']) {
+    const kg = actScores['keep-going'];
+    if ($('#dash-kg-score-text')) $('#dash-kg-score-text').innerHTML = `Last Score: <strong>${kg.score}/100</strong> (${kg.category})`;
+    if ($('#dash-launch-kg-btn')) $('#dash-launch-kg-btn').textContent = 'Retake';
+  }
+  if ($('#dash-all-act-btn')) $('#dash-all-act-btn').onclick = () => renderStudent('activities');
+  if ($('#dash-launch-fg-btn')) $('#dash-launch-fg-btn').onclick = () => { renderStudent('activities'); startFocusGrid(); };
+  if ($('#dash-launch-kg-btn')) $('#dash-launch-kg-btn').onclick = () => { renderStudent('activities'); startKeepGoing(); };
 
   /* load live metric scores */
   try {
@@ -985,6 +1029,888 @@ async function saveLearnSession(taskId, outcome) {
       }),
     });
   } catch (_) { /* session save failed silently */ }
+}
+
+/* ══════════════════════════════════════════════════════════
+   INTERACTIVE ASSESSMENT ACTIVITIES
+   Activity 1: Focus Grid (Concentration)
+   Activity 2: Keep Going (Perseverance)
+   ══════════════════════════════════════════════════════════ */
+
+function getActivityScores() {
+  const username = sessionStorage.getItem('username') || 'student';
+  try {
+    const raw = localStorage.getItem(`shastra_activities_${username}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+async function saveActivityScore(activityId, data) {
+  const username = sessionStorage.getItem('username') || 'student';
+  try {
+    const current = getActivityScores();
+    current[activityId] = {
+      ...data,
+      date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(`shastra_activities_${username}`, JSON.stringify(current));
+  } catch (_) {}
+
+  /* Also record into student session history if backend is active */
+  try {
+    await apiFetch(`/api/students/${username}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        taskId: `activity-${activityId}`,
+        focusSeconds: Math.max(1, data.durationSeconds || 60),
+        totalSeconds: Math.max(1, data.durationSeconds || 60),
+        tabSwitches: 0,
+        correctStreak: data.streak || 0,
+        hintsUsed: data.hintsUsed || 0,
+        selfRating: Math.min(5, Math.max(1, Math.round(data.score / 20))),
+        outcome: data.score >= 50 ? 'solved' : 'failed',
+        attempts: data.attempts || 1,
+      }),
+    });
+  } catch (_) { /* fallback silent */ }
+}
+
+function getScoreCategory(score) {
+  if (score >= 80) return { label: 'Strong', cssClass: 'strong' };
+  if (score >= 60) return { label: 'Developing', cssClass: 'developing' };
+  if (score >= 40) return { label: 'Needs Practice', cssClass: 'needs-practice' };
+  return { label: 'Early Stage', cssClass: 'early-stage' };
+}
+
+/* ── Activity Selection Hub ── */
+function studentActivities() {
+  const scores = getActivityScores();
+  const fg = scores['focus-grid'];
+  const kg = scores['keep-going'];
+
+  $('#main-content').innerHTML = `
+    <div class="section-head">
+      <h2>Character &amp; Cognitive Activities</h2>
+      <p>Interactive assessment activities grounded in Swami Vivekananda's ideals of concentration, character, and mental fortitude.</p>
+    </div>
+
+    <div class="activities-grid">
+      <!-- Activity 1: Focus Grid -->
+      <div class="act-card" id="card-focus-grid">
+        <div class="act-badge-row">
+          <span class="act-category-badge focus">Mind &amp; Focus</span>
+          ${fg ? `<span class="act-prev-score">Latest: <strong>${fg.score}/100</strong> · ${fg.category}</span>` : `<span class="act-prev-score">Not Attempted</span>`}
+        </div>
+        <div class="act-title">Focus Grid</div>
+        <div class="act-desc">
+          Remember the pattern. Recreate it before it disappears. Measures your visual working memory span, attentional control, and recall precision under progressive grid density.
+        </div>
+        <div class="act-meta-list">
+          <div class="act-meta-item">
+            <span class="label">What it Measures</span>
+            <span class="value" style="color:var(--amber-l)">Concentration</span>
+          </div>
+          <div class="act-meta-item">
+            <span class="label">Estimated Duration</span>
+            <span class="value">${IC.clock} 2–4 minutes</span>
+          </div>
+          <div class="act-meta-item">
+            <span class="label">Difficulty Range</span>
+            <span class="value">Level 1 (3×3) to Level 7 (5×5)</span>
+          </div>
+        </div>
+        <button class="btn btn-amber" id="hub-start-fg-btn" style="width:100%;margin-top:auto">
+          ${fg ? 'Retake Focus Grid' : 'Start Assessment'} ${IC.arrow}
+        </button>
+      </div>
+
+      <!-- Activity 2: Keep Going -->
+      <div class="act-card" id="card-keep-going">
+        <div class="act-badge-row">
+          <span class="act-category-badge perseverance">Character &amp; Growth</span>
+          ${kg ? `<span class="act-prev-score">Latest: <strong>${kg.score}/100</strong> · ${kg.category}</span>` : `<span class="act-prev-score">Not Attempted</span>`}
+        </div>
+        <div class="act-title">Keep Going</div>
+        <div class="act-desc">
+          Face increasingly difficult challenges and see how you respond to setbacks. Measures perseverance, constructive resilience, and recovery after unsuccessful attempts.
+        </div>
+        <div class="act-meta-list">
+          <div class="act-meta-item">
+            <span class="label">What it Measures</span>
+            <span class="value" style="color:#A78BFA">Perseverance</span>
+          </div>
+          <div class="act-meta-item">
+            <span class="label">Estimated Duration</span>
+            <span class="value">${IC.clock} 3–5 minutes</span>
+          </div>
+          <div class="act-meta-item">
+            <span class="label">Challenge Sequence</span>
+            <span class="value">5 Progressive Rule-Deduction Puzzles</span>
+          </div>
+        </div>
+        <button class="btn btn-amber" id="hub-start-kg-btn" style="width:100%;margin-top:auto;background:linear-gradient(135deg,#7C3AED,#6D28D9);box-shadow:0 4px 16px rgba(124,58,237,.35)">
+          ${kg ? 'Retake Keep Going' : 'Start Assessment'} ${IC.arrow}
+        </button>
+      </div>
+    </div>
+  `;
+
+  $('#hub-start-fg-btn').onclick = () => startFocusGrid();
+  $('#hub-start-kg-btn').onclick = () => startKeepGoing();
+}
+
+/* ── Activity 1: Focus Grid (Concentration) ── */
+const FG_LEVELS = [
+  { level: 1, size: 3, targets: 3, previewMs: 2500, label: 'Level 1: 3×3 Grid · 3 Tiles' },
+  { level: 2, size: 3, targets: 4, previewMs: 2200, label: 'Level 2: 3×3 Grid · 4 Tiles' },
+  { level: 3, size: 4, targets: 4, previewMs: 2000, label: 'Level 3: 4×4 Grid · 4 Tiles' },
+  { level: 4, size: 4, targets: 5, previewMs: 1800, label: 'Level 4: 4×4 Grid · 5 Tiles' },
+  { level: 5, size: 4, targets: 6, previewMs: 1600, label: 'Level 5: 4×4 Grid · 6 Tiles' },
+  { level: 6, size: 5, targets: 7, previewMs: 1500, label: 'Level 6: 5×5 Grid · 7 Tiles' },
+  { level: 7, size: 5, targets: 8, previewMs: 1300, label: 'Level 7: 5×5 Grid · 8 Tiles' },
+];
+
+function startFocusGrid() {
+  let curLvlIdx = 0;
+  let strikesLeft = 3;
+  let correctClicks = 0;
+  let wrongClicks = 0;
+  let targetSet = new Set();
+  let correctSet = new Set();
+  let wrongSet = new Set();
+  let reactionTimes = [];
+  let recallStart = 0;
+  let sessionStart = Date.now();
+  let highestLevelReached = 1;
+  let activeTimers = [];
+
+  function clearTimers() {
+    activeTimers.forEach(t => clearTimeout(t));
+    activeTimers = [];
+  }
+
+  function renderIntro() {
+    clearTimers();
+    $('#main-content').innerHTML = `
+      <div class="activity-stage">
+        <div class="act-top-bar">
+          <div class="act-top-title">
+            <span style="color:var(--amber-l)">⚡</span> Focus Grid
+          </div>
+          <button class="btn btn-ghost btn-sm" id="fg-exit-btn">${IC.back} Activities</button>
+        </div>
+
+        <div style="text-align:center;padding:24px 10px">
+          <div style="font-size:3rem;margin-bottom:12px">🎯</div>
+          <h2 style="font-family:var(--font-head);font-size:1.8rem;margin-bottom:10px;color:var(--text)">Test Your Visual Concentration</h2>
+          <p style="color:var(--muted);max-width:480px;margin:0 auto 24px;line-height:1.6">
+            A pattern of illuminated tiles will appear briefly. When the pattern disappears, select the exact tiles in their correct positions.
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;max-width:540px;margin:0 auto 30px;text-align:left">
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;font-weight:700">1. Memorize</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">Tiles light up amber. Hold their positions in working memory.</div>
+            </div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;font-weight:700">2. Recreate</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">Tap the exact tiles before making 3 total mistakes.</div>
+            </div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;font-weight:700">3. Progress</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">Grid scales from 3×3 up to 5×5 with faster preview speeds.</div>
+            </div>
+          </div>
+
+          <button class="btn btn-amber btn-lg" id="fg-begin-btn" style="min-width:200px">
+            Start Challenge ${IC.arrow}
+          </button>
+        </div>
+      </div>
+    `;
+
+    $('#fg-exit-btn').onclick = () => { clearTimers(); studentActivities(); };
+    $('#fg-begin-btn').onclick = () => runCountdown();
+  }
+
+  function runCountdown() {
+    clearTimers();
+    const cfg = FG_LEVELS[curLvlIdx];
+    highestLevelReached = Math.max(highestLevelReached, curLvlIdx + 1);
+
+    $('#main-content').innerHTML = `
+      <div class="activity-stage">
+        <div class="act-top-bar">
+          <div class="act-top-title"><span style="color:var(--amber-l)">⚡</span> Focus Grid</div>
+          <div class="act-top-stats">
+            <span class="act-stat-pill" style="color:var(--amber-l)">Level ${curLvlIdx + 1} of ${FG_LEVELS.length}</span>
+            <div class="fg-strikes" title="${strikesLeft} strikes left">
+              ${[1,2,3].map(i => `<div class="fg-strike-dot ${i > strikesLeft ? 'spent' : ''}"></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="act-prog-track">
+          <div class="act-prog-fill" style="width:${((curLvlIdx) / FG_LEVELS.length) * 100}%;background:linear-gradient(90deg,var(--amber),var(--amber-l))"></div>
+        </div>
+
+        <div style="text-align:center;padding:60px 10px" id="fg-countdown-box">
+          <div style="font-size:.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">Get Ready for Level ${curLvlIdx + 1}</div>
+          <div style="font-family:var(--font-head);font-size:3.8rem;color:var(--amber-l);line-height:1" id="fg-countdown-num">3</div>
+          <div style="font-size:.85rem;color:var(--text2);margin-top:12px">${cfg.label}</div>
+        </div>
+      </div>
+    `;
+
+    let count = 3;
+    const interval = setInterval(() => {
+      count--;
+      const el = document.getElementById('fg-countdown-num');
+      if (!el) { clearInterval(interval); return; }
+      if (count > 0) {
+        el.textContent = count;
+      } else {
+        clearInterval(interval);
+        startMemorizePhase();
+      }
+    }, 800);
+  }
+
+  function startMemorizePhase() {
+    clearTimers();
+    const cfg = FG_LEVELS[curLvlIdx];
+    const totalTiles = cfg.size * cfg.size;
+
+    /* Generate random target tiles */
+    targetSet = new Set();
+    while (targetSet.size < cfg.targets) {
+      targetSet.add(Math.floor(Math.random() * totalTiles));
+    }
+    correctSet = new Set();
+    wrongSet = new Set();
+
+    $('#main-content').innerHTML = `
+      <div class="activity-stage">
+        <div class="act-top-bar">
+          <div class="act-top-title"><span style="color:var(--amber-l)">⚡</span> Focus Grid</div>
+          <div class="act-top-stats">
+            <span class="act-stat-pill" style="color:var(--amber-l)">Level ${curLvlIdx + 1} / ${FG_LEVELS.length}</span>
+            <div class="fg-strikes" title="${strikesLeft} strikes left">
+              ${[1,2,3].map(i => `<div class="fg-strike-dot ${i > strikesLeft ? 'spent' : ''}"></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="act-prog-track">
+          <div class="act-prog-fill" id="fg-timer-bar" style="width:100%;background:linear-gradient(90deg,var(--amber),var(--amber-l));transition:width ${cfg.previewMs}ms linear"></div>
+        </div>
+
+        <div class="fg-phase-banner memorize" id="fg-phase-banner">
+          👁 Memorize the illuminated tiles (${(cfg.previewMs / 1000).toFixed(1)}s)...
+        </div>
+
+        <div class="focus-grid-wrap">
+          <div class="focus-grid" id="fg-grid" style="grid-template-columns:repeat(${cfg.size}, 1fr)">
+            ${Array.from({ length: totalTiles }, (_, i) => `
+              <div class="fg-tile ${targetSet.has(i) ? 'preview-active locked' : 'locked'}" data-index="${i}"></div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    /* trigger bar shrink transition */
+    requestAnimationFrame(() => {
+      const bar = document.getElementById('fg-timer-bar');
+      if (bar) bar.style.width = '0%';
+    });
+
+    const timer = setTimeout(() => {
+      startRecallPhase();
+    }, cfg.previewMs);
+    activeTimers.push(timer);
+  }
+
+  function startRecallPhase() {
+    clearTimers();
+    const cfg = FG_LEVELS[curLvlIdx];
+    recallStart = Date.now();
+
+    const banner = document.getElementById('fg-phase-banner');
+    if (banner) {
+      banner.className = 'fg-phase-banner recall';
+      banner.textContent = `🎯 Recall Phase: Tap the ${cfg.targets} target tiles! (0 / ${cfg.targets} found)`;
+    }
+
+    const grid = document.getElementById('fg-grid');
+    if (!grid) return;
+
+    /* Reset preview highlight and remove locked */
+    $$('.fg-tile').forEach(tile => {
+      tile.className = 'fg-tile';
+      const idx = Number(tile.dataset.index);
+
+      tile.onclick = () => {
+        if (correctSet.has(idx) || wrongSet.has(idx)) return;
+        const now = Date.now();
+        reactionTimes.push(now - recallStart);
+
+        if (targetSet.has(idx)) {
+          /* Correct click */
+          correctSet.add(idx);
+          correctClicks++;
+          tile.className = 'fg-tile selected-correct locked';
+
+          if (banner) {
+            banner.textContent = `🎯 Recall Phase: Tap the ${cfg.targets} target tiles! (${correctSet.size} / ${cfg.targets} found)`;
+          }
+
+          if (correctSet.size === targetSet.size) {
+            /* Level Cleared! */
+            $$('.fg-tile').forEach(t => t.classList.add('locked'));
+            if (banner) {
+              banner.className = 'fg-phase-banner success';
+              banner.textContent = `🎉 Brilliant Recall! Level ${curLvlIdx + 1} Cleared!`;
+            }
+
+            const t = setTimeout(() => {
+              if (curLvlIdx + 1 < FG_LEVELS.length) {
+                curLvlIdx++;
+                runCountdown();
+              } else {
+                finishFocusGrid(true);
+              }
+            }, 1200);
+            activeTimers.push(t);
+          }
+        } else {
+          /* Wrong click */
+          wrongSet.add(idx);
+          wrongClicks++;
+          strikesLeft--;
+          tile.className = 'fg-tile selected-wrong locked';
+
+          /* Update strike dots */
+          const dots = $$('.fg-strike-dot');
+          dots.forEach((dot, dIdx) => {
+            if (dIdx >= strikesLeft) dot.classList.add('spent');
+          });
+
+          if (strikesLeft <= 0) {
+            /* Out of strikes! Reveal missed targets */
+            $$('.fg-tile').forEach(t => {
+              t.classList.add('locked');
+              const tIdx = Number(t.dataset.index);
+              if (targetSet.has(tIdx) && !correctSet.has(tIdx)) {
+                t.classList.add('preview-active');
+              }
+            });
+            if (banner) {
+              banner.className = 'fg-phase-banner error';
+              banner.textContent = `⚠ 3 Strikes Reached! Finalizing your concentration score...`;
+            }
+            const t = setTimeout(() => {
+              finishFocusGrid(false);
+            }, 1600);
+            activeTimers.push(t);
+          } else {
+            if (banner) {
+              banner.className = 'fg-phase-banner error';
+              banner.textContent = `❌ Mistake! ${strikesLeft} ${strikesLeft === 1 ? 'strike' : 'strikes'} remaining. Keep focusing!`;
+            }
+          }
+        }
+      };
+    });
+  }
+
+  function finishFocusGrid(completedAll) {
+    clearTimers();
+    const durationSeconds = Math.max(1, Math.round((Date.now() - sessionStart) / 1000));
+    const totalClicks = correctClicks + wrongClicks;
+    const accuracy = totalClicks > 0 ? Math.round((correctClicks / totalClicks) * 100) : 0;
+    const avgResponseTimeSec = reactionTimes.length > 0
+      ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length / 1000).toFixed(2)
+      : '2.00';
+
+    /* Transparent Concentration Score formula */
+    const levelScore = Math.round((highestLevelReached / FG_LEVELS.length) * 40);
+    const accuracyScore = Math.round((accuracy / 100) * 40);
+    const avgSec = Number(avgResponseTimeSec);
+    const speedScore = avgSec <= 1.2 ? 20 : avgSec <= 1.8 ? 16 : avgSec <= 2.5 ? 12 : 8;
+
+    const totalScore = Math.min(100, Math.max(0, levelScore + accuracyScore + speedScore));
+    const cat = getScoreCategory(totalScore);
+
+    const resultData = {
+      score: totalScore,
+      category: cat.label,
+      levelReached: highestLevelReached,
+      accuracy,
+      correctClicks,
+      wrongClicks,
+      avgResponseTimeSec,
+      durationSeconds,
+    };
+
+    saveActivityScore('focus-grid', resultData);
+
+    renderActivityResultScreen({
+      activityId: 'focus-grid',
+      activityTitle: 'Focus Grid',
+      measureName: 'Concentration Score',
+      score: totalScore,
+      category: cat.label,
+      cssClass: cat.cssClass,
+      summaryText: `Your score reflects visual-spatial pattern retention, precision under expanding grid density, and rapid recall without attentional drift.`,
+      metrics: [
+        { label: 'Highest Level', value: `Level ${highestLevelReached} of 7` },
+        { label: 'Recall Accuracy', value: `${accuracy}%` },
+        { label: 'Correct Tiles', value: correctClicks },
+        { label: 'Errors / Distractions', value: wrongClicks },
+        { label: 'Avg Reaction Speed', value: `${avgResponseTimeSec}s` },
+        { label: 'Total Duration', value: `${fmt(durationSeconds)}` },
+      ],
+      onTryAgain: () => startFocusGrid(),
+    });
+  }
+
+  renderIntro();
+}
+
+/* ── Activity 2: Keep Going (Perseverance) ── */
+const KG_CHALLENGES = [
+  {
+    level: 1,
+    theme: 'Foundational Sequence Delta',
+    prompt: 'Observe the progressive growth pattern and deduce the next logical term:',
+    sequence: '4  ➔  7  ➔  13  ➔  25  ➔  [ ? ]',
+    options: [
+      { key: 'A', text: '37' },
+      { key: 'B', text: '49' },
+      { key: 'C', text: '50' },
+      { key: 'D', text: '52' },
+    ],
+    correctKey: 'B',
+    retryHint: 'Look closely at the increments between terms: +3, +6, +12. Notice how each step doubles the previous difference.',
+  },
+  {
+    level: 2,
+    theme: 'Dual-Stream Logic',
+    prompt: 'Track both the alphabetical jumps and the numerical multiplier to determine the next pair:',
+    sequence: '[A, 3]  ➔  [C, 6]  ➔  [F, 12]  ➔  [J, 24]  ➔  [ ? ]',
+    options: [
+      { key: 'A', text: '[M, 48]' },
+      { key: 'B', text: '[N, 36]' },
+      { key: 'C', text: '[O, 48]' },
+      { key: 'D', text: '[P, 48]' },
+    ],
+    correctKey: 'C',
+    retryHint: 'Separate the two streams. Letters advance by increasing gaps (+2: A→C, +3: C→F, +4: F→J, +5: J→O), while numbers consistently double (3, 6, 12, 24, 48).',
+  },
+  {
+    level: 3,
+    theme: 'Geometric Vertex Parity',
+    prompt: 'Each shape bears an energetic value equal to its vertex count. Which element balances the second triad to 22?',
+    sequence: '▲ (3) + ■ (4) + ✦ (10) = 17\n⬟ (5) + ⬡ (6) + [ ? ] = 22',
+    options: [
+      { key: 'A', text: 'Octagon ⯃ (8 vertices)' },
+      { key: 'B', text: 'Nonagon ⯄ (9 vertices)' },
+      { key: 'C', text: '11-Pointed Star ✴ (11 vertices)' },
+      { key: 'D', text: 'Dodecagon ⬢ (12 vertices)' },
+    ],
+    correctKey: 'C',
+    retryHint: 'Sum the known shapes in row 2: 5 + 6 = 11. To satisfy the equilibrium 11 + [ ? ] = 22, the remaining figure requires exactly 11 vertices.',
+  },
+  {
+    level: 4,
+    theme: 'Modular Resonance Function',
+    prompt: 'A cognitive filter evaluates two inputs via: Output = (Node_A × Node_B) mod 9 + 1. Calculate the output for Node_A = 7 and Node_B = 8:',
+    sequence: 'F(7, 8) = (7 × 8) mod 9 + 1 = [ ? ]',
+    options: [
+      { key: 'A', text: '2' },
+      { key: 'B', text: '3' },
+      { key: 'C', text: '5' },
+      { key: 'D', text: '7' },
+    ],
+    correctKey: 'B',
+    retryHint: 'Multiply first: 7 × 8 = 56. When 56 is divided by 9, the quotient is 6 (54) with a remainder of 2. Then add 1: 2 + 1 = 3.',
+  },
+  {
+    level: 5,
+    theme: 'The Shraddha Equilibrium',
+    prompt: 'Three harmonic rows fulfill: Row 1 = 24, Row 2 = 36, Row 3 = 48. Row 3 is formed by [X, 2X, X + 8]. Find the core value of X:',
+    sequence: 'X + 2X + (X + 8) = 48  ➔  What is X?',
+    options: [
+      { key: 'A', text: 'X = 8' },
+      { key: 'B', text: 'X = 10' },
+      { key: 'C', text: 'X = 12' },
+      { key: 'D', text: 'X = 14' },
+    ],
+    correctKey: 'B',
+    retryHint: 'Combine algebraic terms: X + 2X + X = 4X. Then solve 4X + 8 = 48 ➔ 4X = 40 ➔ X = 10.',
+  },
+];
+
+function startKeepGoing() {
+  let currentLevel = 0;
+  let attemptsThisLevel = 0;
+  let hadFailureThisLevel = false;
+  let selectedOption = null;
+  let challengesAttempted = 0;
+  let challengesCompleted = 0;
+  let totalFailures = 0;
+  let retriesAfterFailure = 0;
+  let recoveries = 0;
+  let sessionStart = Date.now();
+  let highestLevelReached = 1;
+
+  function renderIntro() {
+    $('#main-content').innerHTML = `
+      <div class="activity-stage">
+        <div class="act-top-bar">
+          <div class="act-top-title">
+            <span style="color:#A78BFA">🏔</span> Keep Going
+          </div>
+          <button class="btn btn-ghost btn-sm" id="kg-exit-btn">${IC.back} Activities</button>
+        </div>
+
+        <div style="text-align:center;padding:24px 10px">
+          <div style="font-size:3rem;margin-bottom:12px">🧗</div>
+          <h2 style="font-family:var(--font-head);font-size:1.8rem;margin-bottom:10px;color:var(--text)">Test Your Perseverance</h2>
+          <p style="color:var(--muted);max-width:480px;margin:0 auto 24px;line-height:1.6">
+            Face increasingly difficult analytical challenges. When an attempt doesn't work, will you analyze the setback, adapt your thinking, and persist?
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;max-width:540px;margin:0 auto 30px;text-align:left">
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:#A78BFA;text-transform:uppercase;font-weight:700">1. Deduce</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">Carefully examine the progressive cipher logic on each card.</div>
+            </div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:#A78BFA;text-transform:uppercase;font-weight:700">2. Face Setbacks</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">If an attempt fails, you are given helpful cues to rethink and retry.</div>
+            </div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div style="font-size:.78rem;color:#A78BFA;text-transform:uppercase;font-weight:700">3. Grow Resilience</div>
+              <div style="font-size:.85rem;color:var(--text2);margin-top:4px">Your score rewards persistence, recovery after mistakes, and completion.</div>
+            </div>
+          </div>
+
+          <button class="btn btn-amber btn-lg" id="kg-begin-btn" style="min-width:200px;background:linear-gradient(135deg,#7C3AED,#6D28D9);box-shadow:0 4px 16px rgba(124,58,237,.35)">
+            Start Challenge ${IC.arrow}
+          </button>
+        </div>
+      </div>
+    `;
+
+    $('#kg-exit-btn').onclick = () => studentActivities();
+    $('#kg-begin-btn').onclick = () => renderChallenge();
+  }
+
+  function renderChallenge(bannerNotice = '') {
+    const ch = KG_CHALLENGES[currentLevel];
+    highestLevelReached = Math.max(highestLevelReached, currentLevel + 1);
+    challengesAttempted = Math.max(challengesAttempted, currentLevel + 1);
+    selectedOption = null;
+
+    $('#main-content').innerHTML = `
+      <div class="activity-stage">
+        <div class="act-top-bar">
+          <div class="act-top-title">
+            <span style="color:#A78BFA">🏔</span> Keep Going
+          </div>
+          <div class="act-top-stats">
+            <span class="act-stat-pill" style="color:#A78BFA">Level ${currentLevel + 1} of ${KG_CHALLENGES.length}</span>
+            <span class="act-stat-pill" id="kg-attempts-pill">Attempt ${attemptsThisLevel + 1}</span>
+          </div>
+        </div>
+
+        <div class="act-prog-track">
+          <div class="act-prog-fill" style="width:${(currentLevel / KG_CHALLENGES.length) * 100}%;background:linear-gradient(90deg,#7C3AED,#A78BFA)"></div>
+        </div>
+
+        ${bannerNotice ? `
+          <div style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);border-radius:var(--r-md);padding:10px 16px;font-size:.88rem;color:#DDD6FE;margin-bottom:16px;text-align:center">
+            ${bannerNotice}
+          </div>
+        ` : ''}
+
+        <div class="kg-challenge-card">
+          <div class="kg-challenge-theme">${ch.theme}</div>
+          <div class="kg-challenge-prompt">${ch.prompt}</div>
+          <div class="kg-sequence-box">${ch.sequence.replace(/\n/g, '<br>')}</div>
+
+          <div id="kg-feedback-area"></div>
+
+          <div class="kg-options-grid" id="kg-options-grid">
+            ${ch.options.map(opt => `
+              <button class="kg-opt-btn" data-key="${opt.key}">
+                <div class="kg-opt-key">${opt.key}</div>
+                <span>${opt.text}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px" id="kg-actions-row">
+            <button class="btn btn-ghost btn-sm" id="kg-giveup-btn">Conclude Activity</button>
+            <button class="btn btn-amber" id="kg-submit-btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);box-shadow:0 4px 16px rgba(124,58,237,.35)">
+              Verify Answer ${IC.arrow}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $('#kg-giveup-btn').onclick = () => finishKeepGoing();
+
+    /* Options selection */
+    $$('.kg-opt-btn').forEach(btn => {
+      btn.onclick = () => {
+        $$('.kg-opt-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedOption = btn.dataset.key;
+      };
+    });
+
+    $('#kg-submit-btn').onclick = () => {
+      if (!selectedOption) {
+        $('#kg-feedback-area').innerHTML = `
+          <div style="color:#FCA5A5;font-size:.85rem;margin-bottom:12px">⚠ Please choose an option before submitting.</div>
+        `;
+        return;
+      }
+      verifyAttempt();
+    };
+  }
+
+  function verifyAttempt() {
+    const ch = KG_CHALLENGES[currentLevel];
+    attemptsThisLevel++;
+
+    if (selectedOption === ch.correctKey) {
+      /* CORRECT ANSWER */
+      challengesCompleted++;
+      const isRecovery = attemptsThisLevel > 1 && hadFailureThisLevel;
+      if (isRecovery) {
+        recoveries++;
+      }
+
+      $$('.kg-opt-btn').forEach(b => {
+        b.disabled = true;
+        b.style.pointerEvents = 'none';
+        if (b.dataset.key === ch.correctKey) {
+          b.style.borderColor = '#10B981';
+          b.style.background = 'rgba(16,185,129,.2)';
+        }
+      });
+
+      const fb = $('#kg-feedback-area');
+      fb.innerHTML = `
+        <div class="kg-success-card">
+          <div style="font-size:1.8rem;margin-bottom:6px">🌟</div>
+          <div style="font-weight:700;font-size:1.1rem;color:var(--green);margin-bottom:4px">
+            ${isRecovery ? 'Good recovery — you solved it on your next attempt!' : 'Brilliant deduction! Challenge solved.'}
+          </div>
+          <div style="font-size:.88rem;color:var(--muted)">
+            ${isRecovery ? 'You persisted through a setback, analyzed the pattern, and found the correct solution.' : 'You observed the relationship with complete precision.'}
+          </div>
+        </div>
+      `;
+
+      $('#kg-actions-row').innerHTML = `
+        <div></div>
+        <button class="btn btn-amber" id="kg-next-btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);box-shadow:0 4px 16px rgba(124,58,237,.35)">
+          ${currentLevel + 1 < KG_CHALLENGES.length ? `Continue to Level ${currentLevel + 2} ${IC.arrow}` : `View Assessment Results ${IC.arrow}`}
+        </button>
+      `;
+
+      $('#kg-next-btn').onclick = () => {
+        if (currentLevel + 1 < KG_CHALLENGES.length) {
+          currentLevel++;
+          attemptsThisLevel = 0;
+          hadFailureThisLevel = false;
+          renderChallenge('You reached a harder level. Keep going.');
+        } else {
+          finishKeepGoing();
+        }
+      };
+    } else {
+      /* INCORRECT ATTEMPT (SETBACK) */
+      totalFailures++;
+      hadFailureThisLevel = true;
+
+      /* Update attempts pill */
+      const pill = document.getElementById('kg-attempts-pill');
+      if (pill) pill.textContent = `Attempt ${attemptsThisLevel}`;
+
+      const fb = $('#kg-feedback-area');
+      fb.innerHTML = `
+        <div class="kg-setback-card">
+          <div class="kg-setback-title">
+            <span>⚠</span> That attempt didn't work. Try a different approach.
+          </div>
+          <div class="kg-setback-text">
+            "Never say 'no', never say 'I cannot', for you are infinite." — Swami Vivekananda.
+            Setbacks are natural in difficult tasks; real perseverance comes from pausing, adjusting your hypothesis, and continuing.
+          </div>
+          <div class="kg-hint-box">
+            💡 <strong>Guidance:</strong> ${ch.retryHint}
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-amber btn-sm" id="kg-retry-now-btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
+              🔄 Try Again (Keep Going)
+            </button>
+            <button class="btn btn-ghost btn-sm" id="kg-conclude-now-btn">
+              Conclude Session
+            </button>
+          </div>
+        </div>
+      `;
+
+      $('#kg-submit-btn').style.display = 'none';
+
+      $('#kg-retry-now-btn').onclick = () => {
+        retriesAfterFailure++;
+        selectedOption = null;
+        $$('.kg-opt-btn').forEach(b => b.classList.remove('selected'));
+        fb.innerHTML = '';
+        $('#kg-submit-btn').style.display = 'inline-flex';
+      };
+
+      $('#kg-conclude-now-btn').onclick = () => {
+        finishKeepGoing();
+      };
+    }
+  }
+
+  function finishKeepGoing() {
+    const durationSeconds = Math.max(1, Math.round((Date.now() - sessionStart) / 1000));
+    const completionRate = Math.round((challengesCompleted / KG_CHALLENGES.length) * 100);
+
+    /* Transparent Perseverance Score calculation */
+    /* 1. Completion component: up to 40 points */
+    const completionPts = Math.round((challengesCompleted / KG_CHALLENGES.length) * 40);
+
+    /* 2. Resilience / Recovery component: up to 35 points */
+    let recoveryPts = 0;
+    if (totalFailures > 0) {
+      const recoveryRate = recoveries / Math.max(1, challengesCompleted);
+      const retryRate = Math.min(1, retriesAfterFailure / Math.max(1, totalFailures));
+      recoveryPts = Math.round((recoveryRate * 20) + (retryRate * 15));
+    } else if (challengesCompleted > 0) {
+      recoveryPts = 35; /* Perfect run */
+    }
+
+    /* 3. Progression component: up to 25 points */
+    const progressPts = Math.round((highestLevelReached / KG_CHALLENGES.length) * 25);
+
+    const totalScore = Math.min(100, Math.max(0, completionPts + recoveryPts + progressPts));
+    const cat = getScoreCategory(totalScore);
+
+    const resultData = {
+      score: totalScore,
+      category: cat.label,
+      challengesAttempted,
+      challengesCompleted,
+      totalFailures,
+      retriesAfterFailure,
+      recoveries,
+      highestLevelReached,
+      completionRate,
+      durationSeconds,
+    };
+
+    saveActivityScore('keep-going', resultData);
+
+    renderActivityResultScreen({
+      activityId: 'keep-going',
+      activityTitle: 'Keep Going',
+      measureName: 'Perseverance Score',
+      score: totalScore,
+      category: cat.label,
+      cssClass: cat.cssClass,
+      summaryText: `Your score reflects how you responded to challenges and setbacks during this activity.`,
+      metrics: [
+        { label: 'Challenges Solved', value: `${challengesCompleted} of ${KG_CHALLENGES.length}` },
+        { label: 'Highest Level Reached', value: `Level ${highestLevelReached} of 5` },
+        { label: 'Setbacks Encountered', value: totalFailures },
+        { label: 'Retries After Setbacks', value: retriesAfterFailure },
+        { label: 'Successful Recoveries', value: recoveries },
+        { label: 'Total Duration', value: `${fmt(durationSeconds)}` },
+      ],
+      onTryAgain: () => startKeepGoing(),
+    });
+  }
+
+  renderIntro();
+}
+
+/* ── Unified Activity Result Screen ── */
+function renderActivityResultScreen({
+  activityId,
+  activityTitle,
+  measureName,
+  score,
+  category,
+  cssClass,
+  summaryText,
+  metrics,
+  onTryAgain,
+}) {
+  $('#main-content').innerHTML = `
+    <div class="activity-stage">
+      <div class="act-top-bar">
+        <div class="act-top-title">
+          <span>${activityId === 'focus-grid' ? '⚡' : '🏔'}</span> ${activityTitle} Assessment
+        </div>
+        <button class="btn btn-ghost btn-sm" id="res-back-btn">${IC.back} Activities</button>
+      </div>
+
+      <div class="act-result-card">
+        <div class="act-result-circle ${cssClass}">
+          <div class="act-result-num">${score}</div>
+          <div class="act-result-den">out of 100</div>
+        </div>
+
+        <div style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:6px">${measureName}</div>
+        <div class="act-level-badge ${cssClass}">${category}</div>
+
+        <div class="act-summary-text">
+          ${summaryText}
+        </div>
+
+        <div class="act-metrics-breakdown">
+          ${metrics.map(m => `
+            <div class="act-mb-box">
+              <div class="act-mb-val">${m.value}</div>
+              <div class="act-mb-lbl">${m.label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="act-disclaimer">
+          ⚖️ <strong>Performance Note:</strong> This score reflects your performance in this activity and is intended for self-awareness, not clinical assessment.
+        </div>
+
+        <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+          <button class="btn btn-amber" id="res-retry-btn">
+            🔄 Try Again
+          </button>
+          <button class="btn btn-outline" id="res-act-btn">
+            Back to Activities
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  $('#res-back-btn').onclick = () => studentActivities();
+  $('#res-act-btn').onclick  = () => studentActivities();
+  $('#res-retry-btn').onclick = () => onTryAgain();
 }
 
 /* ══════════════════════════════════════════════════════════
