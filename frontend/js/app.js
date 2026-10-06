@@ -538,12 +538,13 @@ function renderLearnPanel() {
     </div>
     <div class="problem">${t.question}</div>
     <div class="ans">
-      <input id="ans-in" placeholder="Your answer…" ${LS.confidence === 0 ? 'disabled' : ''}>
+      <input id="ans-in" placeholder="Your answer…">
     </div>
     <div class="btnrow">
-      <button class="btn primary" id="sub-btn" ${LS.confidence === 0 ? 'disabled' : ''}>Submit Answer</button>
+      <button class="btn primary" id="sub-btn" ${LS.confidence === 0 ? 'disabled' : ''} title="${LS.confidence === 0 ? 'Select a confidence rating above first' : ''}">Submit Answer</button>
       <button class="btn ghost" id="hint-btn">Need a Hint?</button>
     </div>
+    ${LS.confidence === 0 ? '<div style="font-size:.8rem;opacity:.6;margin-top:-6px">★ Rate your confidence above to unlock Submit</div>' : ''}
     <div id="fb"></div>
     <div id="hints"></div>
     <div class="live-calc">Tracking → Focus: <b>Concentration</b> · No hint: <b>Self-Reliance</b> · Retry: <b>Perseverance</b> · Star vs result: <b>Confidence</b></div>`;
@@ -552,8 +553,9 @@ function renderLearnPanel() {
   $$('.star').forEach(s => s.onclick = () => {
     LS.confidence = +s.dataset.n;
     $$('.star').forEach(x => x.classList.toggle('on', +x.dataset.n <= LS.confidence));
-    $('#ans-in').disabled  = false;
     $('#sub-btn').disabled = false;
+    const hint = document.querySelector('.btnrow + div');
+    if (hint) hint.remove();
   });
 
   /* hint button — fetch once, reveal progressively */
