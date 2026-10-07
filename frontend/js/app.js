@@ -547,18 +547,21 @@ async function studentDashboard() {
       </div>
 
       <div class="card today-task">
-        <div class="card-title">Today's Task</div>
-        <div class="task-name">📐 Algebra: Linear Equations</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Today's Challenge</span>
+          <span style="font-size:.8rem;color:var(--amber-l);font-weight:700">⭐ ${getEarnedStars()} stars</span>
+        </div>
+        <div class="task-name">Personal Growth Challenge System</div>
         <div class="task-meta">
-          <span class="task-badge medium">🔥 Medium</span>
-          <span class="task-badge easy">${IC.clock} ~10 min</span>
+          <span class="task-badge medium">🔥 6 Categories</span>
+          <span class="task-badge easy">${IC.clock} Daily Practice</span>
         </div>
         <div>
-          <div class="task-progress-row"><span>Progress</span><span>0 / 5 completed</span></div>
-          <div class="task-prog-bar"><div class="task-prog-fill" style="width:0%"></div></div>
+          <div class="task-progress-row"><span>Progress</span><span>${getCompletedTasks().length} challenges completed</span></div>
+          <div class="task-prog-bar"><div class="task-prog-fill" style="width:${Math.min(100, Math.round((getCompletedTasks().length / 32) * 100))}%"></div></div>
         </div>
         <button class="btn btn-amber" style="width:100%;margin-top:8px" id="start-learn-btn">
-          Start Learning ${IC.arrow}
+          Open My Tasks ${IC.arrow}
         </button>
       </div>
     </div>
@@ -765,6 +768,10 @@ function studentSettings() {
    LEARN — task list + panel
    ══════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════
+   LEARN — PERSONAL GROWTH CHALLENGE SYSTEM (My Tasks)
+   ══════════════════════════════════════════════════════════ */
+
 let LS = {
   tasks:[], taskIdx:0, confidence:0,
   focusing:true, focusedFor:0, totalSecs:0,
@@ -772,6 +779,80 @@ let LS = {
   solved:false, submitting:false, tabSwitches:0,
   _iv:null, _visEl:null,
 };
+
+let selectedTaskCategory   = 'all';
+let selectedTaskDifficulty = 'all';
+
+const TASK_CATEGORIES = [
+  { id: 'all',             label: 'All' },
+  { id: 'Concentration',   label: '🧠 Concentration' },
+  { id: 'Perseverance',    label: '💪 Perseverance' },
+  { id: 'Discipline',      label: '🎯 Discipline' },
+  { id: 'Empathy',         label: '🤝 Empathy' },
+  { id: 'Learning',        label: '📚 Learning' },
+  { id: 'Self Reflection', label: '🪞 Self Reflection' },
+];
+
+const TASK_DIFFICULTIES = [
+  { id: 'all',       label: 'All' },
+  { id: 'Easy',      label: 'Easy' },
+  { id: 'Medium',    label: 'Medium' },
+  { id: 'Hard',      label: 'Hard' },
+  { id: 'Challenge', label: 'Challenge' },
+];
+
+function getCompletedTasks() {
+  const username = sessionStorage.getItem('username') || 'student';
+  try {
+    const raw = localStorage.getItem(`shastra_completed_tasks_${username}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function getEarnedStars() {
+  const username = sessionStorage.getItem('username') || 'student';
+  try {
+    const raw = localStorage.getItem(`shastra_earned_stars_${username}`);
+    return raw ? Number(raw) || 0 : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function saveCompletedTask(taskId, points) {
+  const username = sessionStorage.getItem('username') || 'student';
+  try {
+    const completed = getCompletedTasks();
+    if (!completed.includes(taskId)) {
+      completed.push(taskId);
+      localStorage.setItem(`shastra_completed_tasks_${username}`, JSON.stringify(completed));
+
+      const currentStars = getEarnedStars();
+      const newStars = currentStars + (points || 10);
+      localStorage.setItem(`shastra_earned_stars_${username}`, String(newStars));
+    }
+  } catch (_) {}
+}
+
+function getCategoryIcon(cat) {
+  if (cat === 'Concentration')   return '🧠';
+  if (cat === 'Perseverance')    return '💪';
+  if (cat === 'Discipline')      return '🎯';
+  if (cat === 'Empathy')         return '🤝';
+  if (cat === 'Learning')        return '📚';
+  if (cat === 'Self Reflection') return '🪞';
+  return '⭐';
+}
+
+function getDifficultyClass(diff) {
+  if (diff === 'Easy')      return 'easy';
+  if (diff === 'Medium')    return 'medium';
+  if (diff === 'Hard')      return 'hard';
+  if (diff === 'Challenge') return 'challenge';
+  return 'medium';
+}
 
 function learnCleanup() {
   if (LS._iv)    { clearInterval(LS._iv); LS._iv = null; }
@@ -788,29 +869,91 @@ function resetTaskState() {
 }
 
 async function studentLearn() {
+  learnCleanup();
+  LS.tasks = [];
+
   $('#main-content').innerHTML = `
     <div class="section-head">
       <h2>My Tasks</h2>
-      <p>Select a task to begin your learning session.</p>
+      <p>Personal Growth Challenge System — small actions building stronger character.</p>
     </div>
+
+    <!-- 🌟 Today's Challenge Highlight -->
+    <div id="today-challenge-container"></div>
+
+    <!-- 📊 Growth Progress Card -->
+    <div class="task-progress-card" id="task-progress-card">
+      <div class="tp-stats-left">
+        <div class="tp-completed-text" id="tp-completed-text">Completed: 0 / 0</div>
+        <div class="tp-prog-bar-wrap">
+          <div class="tp-prog-bar-fill" id="tp-prog-fill" style="width:0%"></div>
+        </div>
+        <div id="tp-pct-text" style="font-size:.82rem;font-weight:700;color:var(--text)">0%</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="tp-tier-badge" id="tp-tier-badge">🌱 Novice Explorer</div>
+        <div class="tp-stars-counter" id="tp-stars-counter">⭐ 0 stars earned</div>
+      </div>
+    </div>
+
+    <!-- 🔍 Filter Controls (Category & Difficulty) -->
+    <div class="tasks-filter-container">
+      <div class="tf-row">
+        <div class="tf-label">Category</div>
+        <div class="tf-pills" id="cat-pills">
+          ${TASK_CATEGORIES.map(c => `
+            <button class="tf-pill ${selectedTaskCategory === c.id ? 'active' : ''}" data-cat="${c.id}">${c.label}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="tf-row">
+        <div class="tf-label">Difficulty</div>
+        <div class="tf-pills" id="diff-pills">
+          ${TASK_DIFFICULTIES.map(d => `
+            <button class="tf-pill ${selectedTaskDifficulty === d.id ? 'active' : ''}" data-diff="${d.id}">${d.label}</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Task list + Task panel -->
     <div class="learn-grid">
       <div class="task-list-panel" id="task-list">
-        <div class="loading-state">Loading tasks…</div>
+        <div class="loading-state">Loading challenges…</div>
       </div>
       <div id="task-panel"></div>
-    </div>`;
+    </div>
+  `;
 
-  learnCleanup();
-  LS.tasks = [];
+  // Bind filter button events
+  $$('#cat-pills .tf-pill').forEach(btn => {
+    btn.onclick = () => {
+      $$('#cat-pills .tf-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTaskCategory = btn.dataset.cat;
+      renderLearnList();
+    };
+  });
+
+  $$('#diff-pills .tf-pill').forEach(btn => {
+    btn.onclick = () => {
+      $$('#diff-pills .tf-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTaskDifficulty = btn.dataset.diff;
+      renderLearnList();
+    };
+  });
 
   try {
     const data = await apiFetch('/api/tasks');
     LS.tasks = data.tasks || [];
     if (!LS.tasks.length) {
-      $('#task-list').innerHTML = `<div class="loading-state">No tasks available.</div>`;
+      $('#task-list').innerHTML = `<div class="loading-state">No challenges available.</div>`;
       return;
     }
     LS.taskIdx = 0;
+    renderTodayChallenge();
+    updateProgressDisplay();
     renderLearnList();
     selectLearnTask(0);
   } catch (err) {
@@ -818,12 +961,127 @@ async function studentLearn() {
   }
 }
 
+function renderTodayChallenge() {
+  if (!LS.tasks || !LS.tasks.length) return;
+  const container = document.getElementById('today-challenge-container');
+  if (!container) return;
+
+  // Select a featured challenge from the pool
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const challengeIdx = dayOfYear % LS.tasks.length;
+  const t = LS.tasks[challengeIdx] || LS.tasks[0];
+  const completed = getCompletedTasks().includes(t.id);
+  const catIcon = getCategoryIcon(t.category);
+  const diffClass = getDifficultyClass(t.difficulty);
+
+  container.innerHTML = `
+    <div class="today-challenge-card">
+      <div class="tc-badge-bar">
+        <div class="tc-highlight-badge">
+          <span>🌟</span> Today's Challenge
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:.78rem;font-weight:700;color:var(--text2)">${catIcon} ${t.category || t.subject || 'Growth'}</span>
+          <span class="tl-badge ${diffClass}">[ ${t.difficulty || 'Medium'} ]</span>
+        </div>
+      </div>
+      <div class="tc-title">${t.title}</div>
+      <div class="tc-desc">${t.description || t.question}</div>
+      <div class="tc-footer">
+        <div class="tc-meta">
+          <span>${IC.clock} ${t.estimatedTime || '~15 min'}</span>
+          <span class="tc-meta-stars">⭐ ${t.points || 20} stars</span>
+          ${completed ? '<span class="tl-completed-tag">✓ Completed</span>' : ''}
+        </div>
+        <button class="btn btn-amber btn-sm" id="tc-start-btn">
+          ${completed ? 'Review Challenge' : 'Start Challenge'} ${IC.arrow}
+        </button>
+      </div>
+    </div>
+  `;
+
+  if ($('#tc-start-btn')) {
+    $('#tc-start-btn').onclick = () => {
+      selectLearnTask(challengeIdx);
+      const panel = document.getElementById('task-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+    };
+  }
+}
+
+function updateProgressDisplay() {
+  const completed = getCompletedTasks();
+  const total = LS.tasks.length;
+  const compCount = completed.filter(id => LS.tasks.some(t => t.id === id)).length;
+  const pct = total > 0 ? Math.round((compCount / total) * 100) : 0;
+  const earnedStars = getEarnedStars();
+
+  if ($('#tp-completed-text')) $('#tp-completed-text').textContent = `Completed: ${compCount} / ${total}`;
+  if ($('#tp-prog-fill')) $('#tp-prog-fill').style.width = `${pct}%`;
+  if ($('#tp-pct-text')) $('#tp-pct-text').textContent = `${pct}%`;
+  if ($('#tp-stars-counter')) $('#tp-stars-counter').innerHTML = `⭐ ${earnedStars} stars earned`;
+
+  let tier = '🌱 Novice Explorer';
+  if (compCount >= 15) tier = '👑 Character Master';
+  else if (compCount >= 8) tier = '🌟 Growth Achiever';
+  else if (compCount >= 3) tier = '🌿 Diligent Practitioner';
+  if ($('#tp-tier-badge')) $('#tp-tier-badge').textContent = tier;
+}
+
 function renderLearnList() {
-  $('#task-list').innerHTML = LS.tasks.map((t, i) => `
-    <button class="tl-item ${i === LS.taskIdx ? 'active' : ''}" data-i="${i}">
-      <span>${t.title}</span>
-      <span class="tl-sub">${t.subject || ''}</span>
-    </button>`).join('');
+  const completed = getCompletedTasks();
+
+  // Filter tasks by active category and difficulty
+  const filtered = LS.tasks.map((t, originalIdx) => ({ t, originalIdx })).filter(({ t }) => {
+    const matchCat = selectedTaskCategory === 'all' || (t.category && t.category.toLowerCase() === selectedTaskCategory.toLowerCase());
+    const matchDiff = selectedTaskDifficulty === 'all' || (t.difficulty && t.difficulty.toLowerCase() === selectedTaskDifficulty.toLowerCase());
+    return matchCat && matchDiff;
+  });
+
+  const listEl = $('#task-list');
+  if (!listEl) return;
+
+  if (!filtered.length) {
+    listEl.innerHTML = `
+      <div class="tl-empty-state">
+        <p>No tasks found matching your filter criteria.</p>
+        <button class="btn btn-ghost btn-sm" id="reset-filter-btn">View All Tasks</button>
+      </div>
+    `;
+    if ($('#reset-filter-btn')) {
+      $('#reset-filter-btn').onclick = () => {
+        selectedTaskCategory = 'all';
+        selectedTaskDifficulty = 'all';
+        $$('#cat-pills .tf-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === 'all'));
+        $$('#diff-pills .tf-pill').forEach(b => b.classList.toggle('active', b.dataset.diff === 'all'));
+        renderLearnList();
+      };
+    }
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(({ t, originalIdx }) => {
+    const isCompleted = completed.includes(t.id);
+    const catIcon = getCategoryIcon(t.category);
+    const diffClass = getDifficultyClass(t.difficulty);
+    const isActive = originalIdx === LS.taskIdx;
+
+    return `
+      <button class="tl-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" data-i="${originalIdx}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+          <span style="font-size:.72rem;color:var(--muted);font-weight:600">${catIcon} ${t.category || t.subject || 'Learning'}</span>
+          <span class="tl-badge ${diffClass}">[ ${t.difficulty || 'Medium'} ]</span>
+        </div>
+        <div class="tl-item-title">${t.title}</div>
+        <div class="tl-meta-row">
+          <span>${IC.clock} ${t.estimatedTime || '~10 min'}</span>
+          <span>⭐ ${t.points || 10}</span>
+          ${isCompleted ? '<span class="tl-completed-tag">✓ Completed</span>' : ''}
+        </div>
+      </button>
+    `;
+  }).join('');
+
   $$('.tl-item').forEach(b => b.onclick = () => selectLearnTask(+b.dataset.i));
 }
 
@@ -835,19 +1093,40 @@ function selectLearnTask(idx) {
 }
 
 function renderLearnPanel() {
-  const t   = LS.tasks[LS.taskIdx];
+  const t = LS.tasks[LS.taskIdx];
   if (!t) return;
   const tot = LS.tasks.length;
+  const completed = getCompletedTasks().includes(t.id);
+  const catIcon = getCategoryIcon(t.category);
+  const diffClass = getDifficultyClass(t.difficulty);
+  const isQuestionType = Boolean(t.formula || t.answer);
 
   $('#task-panel').innerHTML = `
     <button class="learn-back" id="learn-back-btn">${IC.back} Back to Tasks</button>
 
     <div class="learn-topbar">
-      <span class="learn-q-label">Question ${LS.taskIdx + 1} of ${tot}</span>
+      <span class="learn-q-label">Challenge ${LS.taskIdx + 1} of ${tot}</span>
       <div class="learn-prog-track">
-        <div class="learn-prog-fill" style="width:${((LS.taskIdx)/tot)*100}%"></div>
+        <div class="learn-prog-fill" style="width:${((LS.taskIdx + 1)/tot)*100}%"></div>
       </div>
       <span class="learn-timer">${IC.clock} <span id="timer-disp">${fmt(LS.totalSecs)}</span></span>
+    </div>
+
+    <!-- Task Header Card -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:18px 22px;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:.82rem;font-weight:700;color:var(--amber-l)">${catIcon} ${t.category || t.subject || 'Learning'}</span>
+          <span class="tl-badge ${diffClass}">[ ${t.difficulty || 'Medium'} ]</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;font-size:.84rem;font-weight:600">
+          <span>${IC.clock} ${t.estimatedTime || '~15 min'}</span>
+          <span style="color:var(--amber-l)">⭐ ${t.points || 20}</span>
+          ${completed ? '<span class="tl-completed-tag">✓ Completed</span>' : ''}
+        </div>
+      </div>
+      <h3 style="font-family:var(--font-head);font-size:1.35rem;color:var(--text);margin-bottom:4px">${t.title}</h3>
+      <p style="font-size:.88rem;color:var(--text2);line-height:1.6">${t.description || ''}</p>
     </div>
 
     <div class="focus-band">
@@ -856,9 +1135,10 @@ function renderLearnPanel() {
       <span style="margin-left:auto;font-size:.76rem;color:var(--dim);font-family:var(--font-mono)">Focus: <b style="color:var(--amber-l)"><span id="focus-secs">${LS.focusedFor}</span>s</b></span>
     </div>
 
+    <!-- Existing Confidence Stars (Preserved!) -->
     <div class="conf-section">
       <div class="conf-label">Before you start</div>
-      <div class="conf-sub">How confident are you about solving this?</div>
+      <div class="conf-sub">How confident are you about completing this challenge? (1–5 stars)</div>
       <div class="stars">
         ${[1,2,3,4,5].map(n => `<button class="star${n <= LS.confidence ? ' on':''}" data-n="${n}">★</button>`).join('')}
       </div>
@@ -866,32 +1146,39 @@ function renderLearnPanel() {
 
     <div class="task-body">
       <div class="q-box">
-        <div class="q-box-label">Question</div>
+        <div class="q-box-label">${isQuestionType ? 'Question' : 'Challenge Instructions'}</div>
         <div class="q-text">${t.question}</div>
         ${t.formula ? `<div class="q-formula">${t.formula}</div>` : ''}
       </div>
       <div class="hint-box">
-        <div class="hint-box-label">Need Help?</div>
+        <div class="hint-box-label">Guidance &amp; Hints</div>
         <div class="hint-btn-inner">
-          <button class="hint-action amber" id="hint-btn">💡 Show Hint (−5 points)</button>
-          <button class="hint-action" id="skip-btn">⏭ Skip Question</button>
+          <button class="hint-action amber" id="hint-btn">💡 Show Hint ${isQuestionType ? '(−5 points)' : ''}</button>
+          <button class="hint-action" id="skip-btn">⏭ Skip Challenge</button>
         </div>
         <div id="hints-list"></div>
       </div>
     </div>
 
     <div class="ans-section">
-      <div class="ans-label">Your Answer</div>
-      <input class="ans-input" id="ans-in" placeholder="Enter your answer here…">
+      <div class="ans-label">${isQuestionType ? 'Your Answer' : 'Your Completion Notes / Reflections'}</div>
+      ${isQuestionType
+        ? `<input class="ans-input" id="ans-in" placeholder="Enter your answer here…">`
+        : `<textarea class="ans-input" id="ans-in" rows="3" style="resize:vertical" placeholder="Write what you accomplished, observed, or learned during this challenge…"></textarea>`}
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-amber" id="sub-btn">Submit Answer</button>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-amber" id="sub-btn" ${completed ? 'disabled' : ''}>
+        ${completed ? '✓ Challenge Completed' : `Complete Challenge (+${t.points || 10} ⭐)`}
+      </button>
       ${LS.taskIdx < LS.tasks.length - 1 ? `<button class="btn btn-ghost" id="next-task-btn">Next Task</button>` : ''}
     </div>
 
-    <div id="fb"></div>
-    <div class="live-track">Tracking → Focus: <b>Concentration</b> · No hint: <b>Self-Reliance</b> · Retry: <b>Perseverance</b> · Star vs result: <b>Confidence</b></div>`;
+    <div id="fb">
+      ${completed ? `<div class="feedback-box feedback-ok">✓ You completed this challenge and earned ⭐ ${t.points || 10} stars. Great character development!</div>` : ''}
+    </div>
+    <div class="live-track">Tracking → Focus: <b>Concentration</b> · Independent Effort: <b>Self-Reliance</b> · Retries: <b>Perseverance</b> · Star vs result: <b>Confidence</b></div>
+  `;
 
   /* back button */
   $('#learn-back-btn').onclick = () => renderStudent('learn');
@@ -900,7 +1187,7 @@ function renderLearnPanel() {
   $$('.star').forEach(s => s.onclick = () => {
     LS.confidence = +s.dataset.n;
     $$('.star').forEach(x => x.classList.toggle('on', +x.dataset.n <= LS.confidence));
-    $('#fb').innerHTML = '';
+    if (!completed) $('#fb').innerHTML = '';
   });
 
   /* hint button */
@@ -912,14 +1199,14 @@ function renderLearnPanel() {
         const data = await apiFetch(`/api/tasks/${t.id}/hints`);
         LS.hintsData = data.hints || [];
       } catch {
-        LS.hintsData = ['Work through the problem step by step.'];
+        LS.hintsData = ['Approach the challenge with patience and focus. Break it down step by step.'];
       }
     }
     if (LS.hintLevel < LS.hintsData.length) LS.hintLevel++;
     $('#hints-list').innerHTML = LS.hintsData.slice(0, LS.hintLevel)
       .map((h, i) => `<div class="hint-item">💡 Hint ${i+1}: ${h}</div>`).join('');
     if (LS.hintLevel < LS.hintsData.length) btn.disabled = false;
-    else btn.textContent = '💡 All hints shown';
+    else btn.textContent = '💡 All guidance shown';
   };
 
   /* skip button */
@@ -933,20 +1220,20 @@ function renderLearnPanel() {
 
   /* submit */
   $('#sub-btn').onclick = async () => {
-    if (LS.submitting || LS.solved) return;
+    if (LS.submitting || LS.solved || completed) return;
 
     if (LS.confidence === 0) {
       $('#fb').innerHTML = `<div class="feedback-box feedback-no">★ Please rate your confidence (1–5 stars) before submitting.</div>`;
       return;
     }
     if (!$('#ans-in').value.trim()) {
-      $('#fb').innerHTML = `<div class="feedback-box feedback-no">✏ Please write your answer before submitting.</div>`;
+      $('#fb').innerHTML = `<div class="feedback-box feedback-no">✏ Please write your answer or reflection before submitting.</div>`;
       return;
     }
 
     LS.submitting = true;
     const btn = $('#sub-btn');
-    btn.disabled = true; btn.textContent = 'Checking…';
+    btn.disabled = true; btn.textContent = 'Verifying…';
 
     try {
       const result = await apiFetch(`/api/tasks/${t.id}/submit`, {
@@ -954,43 +1241,57 @@ function renderLearnPanel() {
         body: JSON.stringify({
           studentId: sessionStorage.getItem('username'),
           answer: $('#ans-in').value.trim(),
-          hintsUsed: LS.hintLevel, selfRating: LS.confidence,
-          focusSeconds: LS.focusedFor, totalSeconds: LS.totalSecs,
-          tabSwitches: LS.tabSwitches, correctStreak: 0,
+          hintsUsed: LS.hintLevel,
+          selfRating: LS.confidence,
+          focusSeconds: LS.focusedFor,
+          totalSeconds: LS.totalSecs,
+          tabSwitches: LS.tabSwitches,
+          correctStreak: 0,
         }),
       });
 
       if (result.correct) {
         LS.solved = true;
         learnCleanup();
+        saveCompletedTask(t.id, t.points || 10);
+        updateProgressDisplay();
+        renderTodayChallenge();
+        renderLearnList();
+
         const focusPct = LS.totalSecs > 0 ? Math.round((LS.focusedFor / LS.totalSecs) * 100) : 0;
         $('#fb').innerHTML = `
           <div style="text-align:center;padding:28px 16px">
             <div class="result-icon correct" style="margin:0 auto 12px">✅</div>
-            <div class="result-title correct">Correct!</div>
-            <div class="result-sub">Great job! You solved it in ${fmt(LS.totalSecs)}.</div>
+            <div class="result-title correct">Challenge Completed!</div>
+            <div class="result-sub" style="color:var(--amber-l);font-weight:700">⭐ +${t.points || 10} Stars Earned!</div>
+            <div class="result-sub">Completed in ${fmt(LS.totalSecs)}. Your character and effort have been logged.</div>
             <div class="result-stats">
               <div class="rs"><div class="rv">${focusPct}%</div><div class="rl">Focus Time</div></div>
+              <div class="rs"><div class="rv">${LS.confidence} ★</div><div class="rl">Confidence</div></div>
               <div class="rs"><div class="rv">${LS.hintLevel}</div><div class="rl">Hints Used</div></div>
-              <div class="rs"><div class="rv">${LS.retryCount}</div><div class="rl">Retries</div></div>
             </div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
               ${LS.taskIdx < LS.tasks.length - 1
-                ? `<button class="btn btn-amber" id="next-q-btn">Next Question ${IC.arrow}</button>` : ''}
-              <button class="btn btn-ghost" id="back-tasks-btn">Back to Tasks</button>
+                ? `<button class="btn btn-amber" id="next-q-btn">Next Challenge ${IC.arrow}</button>` : ''}
+              <button class="btn btn-ghost" id="back-tasks-btn">Back to All Tasks</button>
             </div>
           </div>`;
+
         await saveLearnSession(t.id, 'solved');
         if ($('#next-q-btn')) $('#next-q-btn').onclick = () => selectLearnTask(LS.taskIdx + 1);
         if ($('#back-tasks-btn')) $('#back-tasks-btn').onclick = () => renderStudent('learn');
       } else {
         LS.retryCount++;
         $('#fb').innerHTML = `<div class="feedback-box feedback-no">❌ Not quite — try again. A retry that succeeds counts toward <strong>Perseverance</strong>.</div>`;
-        btn.textContent = 'Submit Answer'; btn.disabled = false; LS.submitting = false;
+        btn.textContent = `Complete Challenge (+${t.points || 10} ⭐)`;
+        btn.disabled = false;
+        LS.submitting = false;
       }
     } catch (err) {
       $('#fb').innerHTML = `<div class="feedback-box feedback-no">⚠ ${err.message}</div>`;
-      btn.textContent = 'Submit Answer'; btn.disabled = false; LS.submitting = false;
+      btn.textContent = `Complete Challenge (+${t.points || 10} ⭐)`;
+      btn.disabled = false;
+      LS.submitting = false;
     }
   };
 
