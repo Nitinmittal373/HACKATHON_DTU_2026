@@ -1,86 +1,117 @@
 /* ═══════════════════════════════════════════════════════════
-   SHASTRA — Design Tokens  (dark-first)
+   SHASTRA — Design Tokens & Glassmorphism System
+   Awakening Education · Vivekananda Inspired UI
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* backgrounds */
-  --bg:        #080D19;
-  --bg2:       #0D1322;
-  --sidebar:   #060A14;
-  --surface:   rgba(255,255,255,0.05);
-  --surface-h: rgba(255,255,255,0.08);
-  --surface-a: rgba(217,119,6,0.12);
+  /* ── Backgrounds & Canvas ── */
+  --bg:             #060B18;
+  --bg2:            #0B1226;
+  --bg-deep:        #040711;
+  --sidebar:        rgba(7, 12, 24, 0.82);
 
-  /* borders */
-  --border:    rgba(255,255,255,0.07);
-  --border-md: rgba(255,255,255,0.13);
+  /* ── Glass Surfaces ── */
+  --glass-bg:       rgba(14, 23, 45, 0.58);
+  --glass-bg-subtle:rgba(255, 255, 255, 0.035);
+  --glass-card:     rgba(17, 27, 52, 0.62);
+  --glass-card-h:   rgba(25, 40, 75, 0.75);
+  --glass-card-high:rgba(22, 35, 68, 0.85);
+  --glass-input:    rgba(6, 12, 26, 0.65);
+  --surface:        rgba(255, 255, 255, 0.05);
+  --surface-h:      rgba(255, 255, 255, 0.09);
+  --surface-a:      rgba(217, 119, 6, 0.15);
 
-  /* amber / saffron accent */
-  --amber:     #D97706;
-  --amber-l:   #F59E0B;
-  --amber-xl:  #FCD34D;
-  --amber-dim: rgba(217,119,6,0.15);
-  --amber-glow:rgba(245,158,11,0.30);
+  /* ── Glass Borders ── */
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-md:      rgba(255, 255, 255, 0.14);
+  --border-high:    rgba(255, 255, 255, 0.22);
+  --border-amber:   rgba(245, 158, 11, 0.35);
+  --border-purple:  rgba(139, 92, 246, 0.35);
 
-  /* text */
-  --text:      #F1F5F9;
-  --text2:     #CBD5E1;
-  --muted:     #94A3B8;
-  --dim:       #475569;
+  /* ── Glass Shadows & Glows ── */
+  --glass-blur:     blur(18px);
+  --glass-blur-lg:  blur(28px);
+  --glass-shadow:   0 10px 32px 0 rgba(0, 0, 0, 0.40), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --glass-shadow-h: 0 16px 44px 0 rgba(0, 0, 0, 0.52), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  --glass-glow-amber: 0 10px 36px -6px rgba(217, 119, 6, 0.35), inset 0 1px 0 0 rgba(251, 191, 36, 0.35);
+  --glass-glow-purple:0 10px 36px -6px rgba(139, 92, 246, 0.35), inset 0 1px 0 0 rgba(167, 139, 250, 0.35);
 
-  /* status */
-  --green:     #10B981;
-  --green-dim: rgba(16,185,129,0.15);
-  --red:       #EF4444;
-  --red-dim:   rgba(239,68,68,0.15);
-  --blue:      #3B82F6;
-  --blue-dim:  rgba(59,130,246,0.15);
-  --purple:    #8B5CF6;
-  --purple-dim:rgba(139,92,246,0.15);
+  /* ── Amber / Saffron Accent (Sacred & Energizing) ── */
+  --amber:          #D97706;
+  --amber-l:        #F59E0B;
+  --amber-xl:       #FCD34D;
+  --amber-dim:      rgba(217, 119, 6, 0.16);
+  --amber-glow:     rgba(245, 158, 11, 0.32);
 
-  /* per-metric accent colours */
-  --m-conc:    #F59E0B;
-  --m-rel:     #10B981;
-  --m-pers:    #8B5CF6;
-  --m-conf:    #3B82F6;
-  --m-char:    #EC4899;
+  /* ── Typography & Contrast ── */
+  --text:           #F8FAFC;
+  --text2:          #CBD5E1;
+  --muted:          #94A3B8;
+  --dim:            #64748B;
 
-  /* typography */
-  --font-head: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* ── Status & Category Accents ── */
+  --green:          #10B981;
+  --green-dim:      rgba(16, 185, 129, 0.15);
+  --green-glow:     rgba(16, 185, 129, 0.30);
+  --red:            #EF4444;
+  --red-dim:        rgba(239, 68, 68, 0.15);
+  --blue:           #3B82F6;
+  --blue-dim:       rgba(59, 130, 246, 0.15);
+  --purple:         #8B5CF6;
+  --purple-dim:     rgba(139, 92, 246, 0.15);
 
-  /* layout */
-  --sidebar-w: 240px;
-  --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 18px;
-  --r-2xl:24px;
+  /* ── Vivekananda Metric Attributes ── */
+  --m-conc:         #F59E0B;
+  --m-rel:          #10B981;
+  --m-pers:         #8B5CF6;
+  --m-conf:         #3B82F6;
+  --m-char:         #EC4899;
+
+  /* ── Typography Families ── */
+  --font-head:      'Playfair Display', Georgia, serif;
+  --font-body:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:      'IBM Plex Mono', monospace;
+
+  /* ── Layout & Geometry ── */
+  --sidebar-w:      250px;
+  --r-xs:           4px;
+  --r-sm:           8px;
+  --r-md:           12px;
+  --r-lg:           16px;
+  --r-xl:           20px;
+  --r-2xl:          28px;
+  --transition:     all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Reset ── */
+/* ── Reset & Foundation ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 65% 55% at 85% 8%, rgba(217, 119, 6, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 10% 88%, rgba(99, 102, 241, 0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 50% at 50% 45%, rgba(15, 23, 42, 0.5) 0%, transparent 100%),
+    linear-gradient(180deg, #060B18 0%, #0A1124 50%, #050914 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-body);
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1,h2,h3,h4 { font-family: var(--font-head); line-height: 1.2; }
-button { cursor: pointer; font-family: var(--font-body); }
+h1,h2,h3,h4 { font-family: var(--font-head); line-height: 1.25; font-weight: 700; }
+button { cursor: pointer; font-family: var(--font-body); border: none; }
 img    { max-width: 100%; }
 [hidden]{ display: none !important; }
 canvas  { max-width: 100%; display: block; }
 a       { color: inherit; text-decoration: none; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar        { width: 6px; }
+/* ── Smooth Scrollbar ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.4); }

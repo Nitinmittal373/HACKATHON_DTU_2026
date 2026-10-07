@@ -248,12 +248,20 @@ function sidebarHTML(activeTab, role) {
       </div>
       <button class="sb-logout" title="Sign out" id="sb-logout-btn">${IC.logout}</button>
     </div>
-  </aside>`;
+  </aside>
+
+  <!-- Mobile Bottom Floating Glass Nav -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+    ${nav.map(n => `
+      <button class="mb-item ${n.id === activeTab ? 'active' : ''}" data-tab="${n.id}" title="${n.label}">
+        ${n.icon}<span>${n.label}</span>
+      </button>`).join('')}
+  </nav>`;
 }
 
 function bindSidebarNav(role) {
-  $('#sb-logout-btn').onclick = () => { sessionStorage.clear(); SCORES = null; renderLogin(); };
-  $$('.sb-item').forEach(btn => {
+  if ($('#sb-logout-btn')) $('#sb-logout-btn').onclick = () => { sessionStorage.clear(); SCORES = null; renderLogin(); };
+  $$('.sb-item, .mb-item').forEach(btn => {
     btn.onclick = () => {
       const tab = btn.dataset.tab;
       if (role === 'teacher') renderTeacher(tab);
@@ -403,25 +411,25 @@ function renderLogin() {
       <div class="auth-right">
         <div style="margin-bottom:24px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-size:1.3rem;color:var(--amber-l)">ॐ</span>
-            <span style="font-family:var(--font-head);font-size:1rem;color:var(--muted)">Shastra</span>
+            <span style="font-size:1.3rem;color:var(--amber-l);filter:drop-shadow(0 0 8px rgba(245,158,11,.4))">ॐ</span>
+            <span style="font-family:var(--font-head);font-size:1.05rem;font-weight:700;color:var(--muted);letter-spacing:.04em">Shastra</span>
           </div>
           <h2>Welcome Back</h2>
-          <p class="auth-sub">Continue your journey of growth and self-discovery.</p>
+          <p class="auth-sub">Continue your journey beyond marks — Awakening education for character &amp; growth.</p>
         </div>
 
         <div class="field">
-          <label>Username</label>
+          <label for="uname">Username</label>
           <div class="field-wrap">
-            <span class="field-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-            <input class="login-input" id="uname" value="rahul_singh" placeholder="Your username" autocomplete="username">
+            <span class="field-icon"><svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <input class="login-input" id="uname" value="rahul_singh" placeholder="Enter your username" autocomplete="username">
           </div>
         </div>
         <div class="field">
-          <label>Password</label>
+          <label for="pword">Password</label>
           <div class="field-wrap">
-            <span class="field-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-            <input class="login-input" id="pword" type="password" value="pass" placeholder="Your password" autocomplete="current-password">
+            <span class="field-icon"><svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+            <input class="login-input" id="pword" type="password" value="pass" placeholder="Enter your password" autocomplete="current-password">
           </div>
         </div>
 
@@ -432,7 +440,7 @@ function renderLogin() {
 
         <div id="login-error"></div>
 
-        <button class="btn btn-amber" style="width:100%;margin-bottom:4px" id="go-btn">Login</button>
+        <button class="btn btn-amber" style="width:100%;margin-bottom:4px;font-size:.95rem;padding:13px" id="go-btn">Sign In to Shastra</button>
 
         <div class="auth-divider"><span>OR</span></div>
 
@@ -441,13 +449,19 @@ function renderLogin() {
         </button>
 
         <div class="auth-link">
-          New here? <a href="#">Sign up as a new user</a>
+          New here? <a href="#">Create a new student account</a>
         </div>
 
         <div class="auth-demo">
-          Demo Accounts<br>
-          <strong style="color:var(--text2)">Student:</strong> rahul_singh / pass &nbsp;·&nbsp;
-          <strong style="color:var(--text2)">Teacher:</strong> teacher_priya / pass
+          <div class="auth-demo-title">⚡ Quick Demo Login</div>
+          <div class="auth-demo-chips">
+            <button type="button" class="demo-chip" id="demo-student" title="Click to fill student credentials">
+              <span class="chip-role">Student</span> rahul_singh
+            </button>
+            <button type="button" class="demo-chip" id="demo-teacher" title="Click to fill teacher credentials">
+              <span class="chip-role">Teacher</span> teacher_priya
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -461,7 +475,7 @@ function renderLogin() {
 
     errEl.textContent = '';
     btn.disabled      = true;
-    btn.textContent   = 'Logging in…';
+    btn.textContent   = 'Authenticating…';
 
     try {
       const data = await apiFetch('/api/auth/login', {
@@ -478,9 +492,25 @@ function renderLogin() {
     } catch (err) {
       errEl.textContent = err.message;
       btn.disabled      = false;
-      btn.innerHTML     = 'Login';
+      btn.innerHTML     = 'Sign In to Shastra';
     }
   };
+
+  /* Demo account click autofill */
+  if ($('#demo-student')) {
+    $('#demo-student').onclick = () => {
+      $('#uname').value = 'rahul_singh';
+      $('#pword').value = 'pass';
+      $('#go-btn').focus();
+    };
+  }
+  if ($('#demo-teacher')) {
+    $('#demo-teacher').onclick = () => {
+      $('#uname').value = 'teacher_priya';
+      $('#pword').value = 'pass';
+      $('#go-btn').focus();
+    };
+  }
 
   /* allow Enter key */
   ['uname','pword'].forEach(id => {
@@ -573,19 +603,19 @@ async function studentDashboard() {
         <button class="btn btn-ghost btn-sm" id="dash-all-act-btn">View Activities ${IC.arrow}</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:10px">
-        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div class="dash-quick-act">
           <div>
             <div style="font-size:.74rem;font-weight:700;color:var(--amber-l);text-transform:uppercase;letter-spacing:.05em">Mind &amp; Focus</div>
-            <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-top:2px">Focus Grid</div>
-            <div style="font-size:.8rem;color:var(--muted);margin-top:2px" id="dash-fg-score-text">Measuring Concentration</div>
+            <div style="font-weight:700;font-size:1.1rem;color:var(--text);margin-top:2px">Focus Grid</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-top:2px" id="dash-fg-score-text">Measuring Concentration</div>
           </div>
           <button class="btn btn-amber btn-sm" id="dash-launch-fg-btn">Assess</button>
         </div>
-        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div class="dash-quick-act">
           <div>
             <div style="font-size:.74rem;font-weight:700;color:#A78BFA;text-transform:uppercase;letter-spacing:.05em">Character &amp; Growth</div>
-            <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-top:2px">Keep Going</div>
-            <div style="font-size:.8rem;color:var(--muted);margin-top:2px" id="dash-kg-score-text">Measuring Perseverance</div>
+            <div style="font-weight:700;font-size:1.1rem;color:var(--text);margin-top:2px">Keep Going</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-top:2px" id="dash-kg-score-text">Measuring Perseverance</div>
           </div>
           <button class="btn btn-amber btn-sm" style="background:linear-gradient(135deg,#7C3AED,#6D28D9)" id="dash-launch-kg-btn">Assess</button>
         </div>
@@ -2177,7 +2207,9 @@ function renderActivityResultScreen({
           <div class="act-result-den">out of 100</div>
         </div>
 
-        <div style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:6px">${measureName}</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);border-radius:999px;padding:6px 18px;font-size:.88rem;font-weight:700;color:var(--amber-l);margin-bottom:14px;box-shadow:0 4px 14px rgba(217,119,6,.2)">⭐ +${Math.round(score * 0.4)} stars earned</div>
+
+        <div style="font-size:1.15rem;font-weight:700;color:var(--text);margin-bottom:6px">${measureName}</div>
         <div class="act-level-badge ${cssClass}">${category}</div>
 
         <div class="act-summary-text">
